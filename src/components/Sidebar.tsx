@@ -1,4 +1,5 @@
 import React from 'react';
+import { Icon } from '@iconify/react';
 
 // Hook para simular dados do usuário
 function useUser() {
@@ -29,21 +30,21 @@ const Sidebar: React.FC<SidebarProps> = ({ onTabChange, activeTab }) => {
           className={`nav-item w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md ${activeTab === 'dashboard' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'} border border-transparent`}
           onClick={() => onTabChange && onTabChange('dashboard')}
         >
-          <span className="material-icons"><iconify-icon icon="solar:widget-2-linear" width="18"></iconify-icon></span>
+          <Icon icon="solar:widget-2-linear" width={18} />
           Visão Geral
         </button>
         <button
           className={`nav-item w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md ${activeTab === 'products' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'} border border-transparent`}
           onClick={() => onTabChange && onTabChange('products')}
         >
-          <span className="material-icons"><iconify-icon icon="solar:box-linear" width="18"></iconify-icon></span>
+          <Icon icon="solar:box-linear" width={18} />
           Produtos
         </button>
         <button
           className={`nav-item w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md ${activeTab === 'sales' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'} border border-transparent`}
           onClick={() => onTabChange && onTabChange('sales')}
         >
-          <span className="material-icons"><iconify-icon icon="solar:cart-large-minimalistic-linear" width="18"></iconify-icon></span>
+          <Icon icon="solar:cart-large-minimalistic-linear" width={18} />
           Vendas (PDV)
         </button>
       </div>

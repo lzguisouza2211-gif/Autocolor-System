@@ -1,31 +1,32 @@
 import React from 'react';
+import { Icon } from '@iconify/react';
 
 // Hook para simular as métricas do dashboard
 function useDashboardMetrics() {
   return [
     {
-      icon: <iconify-icon icon="solar:box-linear" width="20"></iconify-icon>,
+      icon: <Icon icon="solar:box-linear" width={20} />, 
       value: '1,248',
       label: 'Produtos Cadastrados',
       badge: '+12%',
       badgeColor: 'emerald',
     },
     {
-      icon: <iconify-icon icon="solar:bag-check-linear" width="20"></iconify-icon>,
+      icon: <Icon icon="solar:bag-check-linear" width={20} />, 
       value: 'R$ 48.2k',
       label: 'Vendas (Mês)',
       badge: '+5%',
       badgeColor: 'emerald',
     },
     {
-      icon: <iconify-icon icon="solar:danger-circle-linear" width="20"></iconify-icon>,
+      icon: <Icon icon="solar:danger-circle-linear" width={20} />, 
       value: '8',
       label: 'Estoque Crítico',
       badge: 'Atenção',
       badgeColor: 'orange',
     },
     {
-      icon: <iconify-icon icon="solar:users-group-rounded-linear" width="20"></iconify-icon>,
+      icon: <Icon icon="solar:users-group-rounded-linear" width={20} />, 
       value: '342',
       label: 'Clientes Ativos',
       badge: null,

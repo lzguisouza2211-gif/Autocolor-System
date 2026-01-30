@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import { useState } from 'react';
 import './App.css';
 import Sidebar from './components/Sidebar';
 import DashboardMetrics from './components/DashboardMetrics';
@@ -7,7 +6,7 @@ import RecentSalesTable from './components/RecentSalesTable';
 import ProductsTable from './components/ProductsTable';
 
 function App() {
-  const [tab, setTab] = useState<'dashboard' | 'products' | 'sales'>('dashboard');
+  const [tab, setTab] = useState<string>("dashboard");
 
   return (
     <div className="bg-gray-50 text-slate-800 font-sans h-screen flex overflow-hidden">

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Icon } from '@iconify/react';
 
 // Hook para simular produtos
 function useProducts() {
@@ -33,7 +34,7 @@ const ProductsTable: React.FC = () => {
     <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
       <div className="p-4 border-b border-gray-100 flex gap-4">
         <div className="relative flex-1 max-w-sm">
-          <iconify-icon icon="solar:magnifer-linear" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" width="16"></iconify-icon>
+          <Icon icon="solar:magnifer-linear" className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" width={16} />
           <input type="text" placeholder="Buscar por nome, código ou categoria..." className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
         </div>
       </div>
@@ -57,7 +58,7 @@ const ProductsTable: React.FC = () => {
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded bg-gray-100 border border-gray-200 flex items-center justify-center text-slate-400">
-                      <iconify-icon icon="solar:gallery-linear"></iconify-icon>
+                      <Icon icon="solar:gallery-linear" />
                     </div>
                     <div>
                       <div className="font-medium text-slate-900">{product.nome}</div>
@@ -77,7 +78,7 @@ const ProductsTable: React.FC = () => {
                   </div>
                 </td>
                 <td className="px-6 py-4 text-right">
-                  <button className="text-slate-400 hover:text-indigo-600 transition-colors"><iconify-icon icon="solar:pen-linear" width="18"></iconify-icon></button>
+                  <button className="text-slate-400 hover:text-indigo-600 transition-colors"><Icon icon="solar:pen-linear" width={18} /></button>
                 </td>
               </tr>
             ))}

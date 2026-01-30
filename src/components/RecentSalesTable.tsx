@@ -1,5 +1,6 @@
 import React from 'react';
 
+
 // Hook para simular vendas recentes
 function useRecentSales() {
   return [
