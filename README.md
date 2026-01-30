@@ -1,112 +1,73 @@
-# AutoColor System
+# React + TypeScript + Vite
 
-AutoColor-System é um sistema web profissional de gestão de estoque e vendas (PDV) desenvolvido para comércios de tintas automotivas e produtos automotivos, incluindo controle de insumos, fabricação de sprays personalizados e operação de vendas no balcão.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-O foco do projeto é oferecer uma solução simples, moderna e eficiente para pequenos e médios negócios.
+Currently, two official plugins are available:
 
----
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-## 🚀 Tecnologias Utilizadas
+## React Compiler
 
-### Frontend
-- React
-- TypeScript
-- Tailwind CSS
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-### Backend & Banco de Dados
-- Supabase (PostgreSQL)
+## Expanding the ESLint configuration
 
-### Infraestrutura
-- Vercel (deploy do frontend)
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
----
+```js
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
 
-## 📦 Arquitetura do Sistema
+      // Remove tseslint.configs.recommended and replace with this
+      tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      tseslint.configs.stylisticTypeChecked,
 
-O sistema é organizado em camadas:
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+```
 
-- Interface Web (Frontend)
-- API / Integração com Supabase
-- Banco de Dados relacional
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
-Principais tabelas:
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
 
-- Produtos  
-- Estoque  
-- Movimentações  
-- Pedidos  
-- Itens do Pedido  
-
----
-
-## 📊 Funcionalidades
-
-### Produtos
-- Cadastro e edição de produtos automotivos  
-- Organização por categorias (tintas, sprays, vernizes, acessórios, insumos)  
-- Definição de custo e preço de venda  
-
-### Estoque
-- Controle automático de quantidade por produto  
-- Atualização via movimentações de entrada e saída  
-- Indicadores de estoque crítico  
-
-### Movimentações
-- Registro de entradas (compra/reposição)  
-- Registro de saídas (vendas/ajustes)  
-- Histórico completo por produto  
-
-### Vendas (PDV)
-- Criação de pedidos  
-- Seleção de produtos e quantidades  
-- Cálculo automático de valores  
-- Atualização automática do estoque  
-
-### Dashboard
-- Visão geral de produtos  
-- Estoque atual  
-- Vendas  
-- Alertas de baixo estoque  
-
----
-
-## 📱 Responsividade
-
-- Interface adaptada para desktop e mobile  
-- Uso otimizado para operação com uma mão no celular  
-- Layout moderno e corporativo  
-
----
-
-## 🎯 Objetivo
-
-Desenvolver um MVP robusto e escalável que possa evoluir para um sistema completo de gestão comercial automotiva.
-
-O projeto foi pensado para:
-
-- Uso real em lojas físicas  
-- Possível comercialização futura  
-- Expansão de funcionalidades  
-
----
-
-## 🧩 Expansões Futuras (planejadas)
-
-- Gestão de fornecedores  
-- Relatórios financeiros  
-- Controle de clientes  
-- Histórico de preços  
-- Permissões de usuários  
-- Integração com impressoras fiscais  
-
----
-
-## 📌 Status do Projeto
-
-🚧 Em desenvolvimento ativo
-
----
-
-## 👨‍💻 Autor
-
-Guilherme  
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+```
