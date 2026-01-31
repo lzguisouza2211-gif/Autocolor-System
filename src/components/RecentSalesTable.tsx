@@ -2,10 +2,7 @@ import React, { useState, useEffect } from 'react';
 import SaleForm from './SaleForm';
 import { supabase } from '../supabase';
 
-const statusColors: Record<string, string> = {
-  concluido: 'bg-green-50 text-green-700 ring-green-600/20',
-  separando: 'bg-blue-50 text-blue-700 ring-blue-600/20',
-};
+
 
 const RecentSalesTable: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
@@ -66,7 +63,7 @@ const RecentSalesTable: React.FC = () => {
                   <td className="px-4 py-2 font-mono text-xs text-slate-400">#{sale.id}</td>
                   <td className="px-4 py-2 text-slate-500">
                     {sale.sale_items && sale.sale_items.length > 0
-                      ? sale.sale_items.map((item: any, i: number) => `${item.quantidade}x Produto ${item.product_id}`).join(', ')
+                      ? sale.sale_items.map((item: any) => `${item.quantidade}x Produto ${item.product_id}`).join(', ')
                       : '-'}
                   </td>
                   <td className="px-4 py-2 text-slate-500">{new Date(sale.created_at).toLocaleDateString()}</td>

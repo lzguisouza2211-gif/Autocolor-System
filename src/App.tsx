@@ -7,11 +7,11 @@ import ProductsTable from './components/ProductsTable';
 import MobileMenu from './components/MobileMenu';
 
 function App() {
-  const [tab, setTab] = useState<string>("dashboard");
+  const [ tab ] = useState<string>("dashboard");
 
   return (
     <div className="bg-gray-50 text-slate-800 font-sans h-screen flex overflow-hidden">
-      <Sidebar onTabChange={setTab} activeTab={tab} />
+      <Sidebar />
       <main className="flex-1 flex flex-col h-full overflow-hidden bg-gray-50/50 relative">
         <header className="h-16 bg-white/80 backdrop-blur border-b border-gray-200 flex items-center px-4 lg:px-8 shrink-0 z-10">
           {/* Esquerda: menu e logo */}
