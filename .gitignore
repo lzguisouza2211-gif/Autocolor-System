@@ -1,0 +1,19 @@
+# Ignora dependências do Node.js
+node_modules/
+
+# Ignora logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Ignora diretórios de build comuns
+dist/
+build/
+
+# Ignora arquivos do sistema
+.DS_Store
+Thumbs.db
+
+# Ignora arquivos de ambiente
+.env
+.env.*
