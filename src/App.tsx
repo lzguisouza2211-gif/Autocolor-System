@@ -28,7 +28,7 @@ function App() {
             </button>
           </div>
         </header>
-        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-8">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-8">
           {tab === 'dashboard' && (
             <div className="space-y-6 fade-in">
               <div className="flex items-end justify-between">

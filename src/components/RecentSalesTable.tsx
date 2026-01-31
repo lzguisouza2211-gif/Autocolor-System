@@ -49,23 +49,23 @@ const RecentSalesTable: React.FC = () => {
         <table className="w-full text-left text-sm text-slate-600">
           <thead className="bg-gray-50 text-xs uppercase text-slate-500 font-medium">
             <tr>
-              <th className="px-6 py-3 tracking-wider">ID</th>
-              <th className="px-6 py-3 tracking-wider">Cliente</th>
-              <th className="px-6 py-3 tracking-wider">Itens</th>
-              <th className="px-6 py-3 tracking-wider">Status</th>
-              <th className="px-6 py-3 tracking-wider text-right">Total</th>
+              <th className="px-4 py-2 tracking-wider">ID</th>
+              <th className="px-4 py-2 tracking-wider">Cliente</th>
+              <th className="px-4 py-2 tracking-wider">Itens</th>
+              <th className="px-4 py-2 tracking-wider">Status</th>
+              <th className="px-4 py-2 tracking-wider text-right">Total</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-gray-50">
             {sales.map((sale, idx) => (
-              <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                <td className="px-6 py-4 font-mono text-xs text-slate-400">{sale.id}</td>
-                <td className="px-6 py-4 font-medium text-slate-900">{sale.cliente}</td>
-                <td className="px-6 py-4">{sale.itens}</td>
-                <td className="px-6 py-4">
+              <tr key={idx}>
+                <td className="px-4 py-2 font-mono text-xs text-slate-400">{sale.id}</td>
+                <td className="px-4 py-2 font-normal text-slate-900">{sale.cliente}</td>
+                <td className="px-4 py-2 text-slate-500">{sale.itens}</td>
+                <td className="px-4 py-2">
                   <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ring-1 ring-inset ${statusColors[sale.statusColor]}`}>{sale.status}</span>
                 </td>
-                <td className="px-6 py-4 text-right font-medium text-slate-900">{sale.total}</td>
+                <td className="px-4 py-2 text-right font-normal text-slate-900">{sale.total}</td>
               </tr>
             ))}
           </tbody>
