@@ -1,9 +1,6 @@
 import React from 'react';
 import { Icon } from '@iconify/react';
-<<<<<<< Updated upstream
-=======
 import { NavLink } from 'react-router-dom';
->>>>>>> Stashed changes
 
 // Hook para simular dados do usuário
 function useUser() {
@@ -14,18 +11,7 @@ function useUser() {
   };
 }
 
-<<<<<<< Updated upstream
-interface SidebarProps {
-  onTabChange?: (tab: string) => void;
-  activeTab?: string;
-}
-
-const Sidebar: React.FC<SidebarProps> = ({ onTabChange, activeTab }) => {
-=======
-interface SidebarProps {}
-
-const Sidebar: React.FC<SidebarProps> = () => {
->>>>>>> Stashed changes
+const Sidebar: React.FC = () => {
   const user = useUser();
 
   return (
@@ -36,29 +22,6 @@ const Sidebar: React.FC<SidebarProps> = () => {
       </div>
       <div className="p-4 flex flex-col gap-1 flex-1">
         <p className="px-2 text-xs font-medium text-slate-400 mb-2 mt-2 uppercase tracking-wider">Gestão</p>
-<<<<<<< Updated upstream
-        <button
-          className={`nav-item w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md ${activeTab === 'dashboard' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'} border border-transparent`}
-          onClick={() => onTabChange && onTabChange('dashboard')}
-        >
-          <Icon icon="solar:widget-2-linear" width={18} />
-          Visão Geral
-        </button>
-        <button
-          className={`nav-item w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md ${activeTab === 'products' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'} border border-transparent`}
-          onClick={() => onTabChange && onTabChange('products')}
-        >
-          <Icon icon="solar:box-linear" width={18} />
-          Produtos
-        </button>
-        <button
-          className={`nav-item w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md ${activeTab === 'sales' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'} border border-transparent`}
-          onClick={() => onTabChange && onTabChange('sales')}
-        >
-          <Icon icon="solar:cart-large-minimalistic-linear" width={18} />
-          Vendas (PDV)
-        </button>
-=======
         <NavLink
           to="/visao-geral"
           className={({ isActive }) =>
@@ -86,7 +49,6 @@ const Sidebar: React.FC<SidebarProps> = () => {
           <Icon icon="solar:cart-large-minimalistic-linear" width={18} />
           Vendas (PDV)
         </NavLink>
->>>>>>> Stashed changes
       </div>
       <div className="p-4 border-t border-gray-100">
         <div className="flex items-center gap-3 px-2 py-2">
