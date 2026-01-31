@@ -21,3 +21,6 @@ ALTER TABLE products
 ADD COLUMN deleted_at TIMESTAMP;
 
 -- Opcional: para filtrar apenas produtos ativos, use WHERE deleted_at IS NULL
+
+-- Adiciona a coluna 'marca' à tabela products
+ALTER TABLE products ADD COLUMN mark TEXT;
