@@ -43,6 +43,10 @@ function Vendas() {
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
 
+  // Debug: verificar autenticação
+  console.log('🔐 User:', user);
+  console.log('🔐 Loading:', loading);
+
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center">
