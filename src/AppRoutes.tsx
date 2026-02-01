@@ -1,5 +1,4 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import DashboardMetrics from './components/DashboardMetrics';
 import RecentSalesTable from './components/RecentSalesTable';
