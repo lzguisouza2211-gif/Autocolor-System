@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import BarcodeScanner from './BarcodeScanner';
 import { supabase } from '../supabase';
 
 interface ProductFormProps {
@@ -7,6 +8,7 @@ interface ProductFormProps {
 }
 
 const ProductForm: React.FC<ProductFormProps> = ({ product, onSave }) => {
+  const [scannerOpen, setScannerOpen] = useState(false);
   const [form, setForm] = useState({
     name: product?.name || '',
     category: product?.category || '',
@@ -15,6 +17,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave }) => {
     venda: product?.venda || '',
     stock: product?.stock || '',
     price_sale: product?.price_sale || '',
+    barcode: product?.barcode || '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,6 +26,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave }) => {
   const [brands, setBrands] = useState<string[]>([]);
   const [newBrand, setNewBrand] = useState('');
   const [success, setSuccess] = useState<string | null>(null);
+  const [isRestocking, setIsRestocking] = useState(false);
+  const [existingProduct, setExistingProduct] = useState<any>(null);
+  const [restockQuantity, setRestockQuantity] = useState('1');
 
   React.useEffect(() => {
     const fetchCategoriesAndBrands = async () => {
@@ -43,11 +49,56 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave }) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const checkBarcodeExists = async (barcode: string) => {
+    if (!barcode) return;
+    const { data: existing, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('barcode', barcode)
+      .maybeSingle();
+    if (!error && existing) {
+      setIsRestocking(true);
+      setExistingProduct(existing);
+      setRestockQuantity('1');
+    } else {
+      setIsRestocking(false);
+      setExistingProduct(null);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
     try {
+      // Se está em modo reabastecimento
+      if (isRestocking && existingProduct) {
+        console.log('Modo reabastecimento:', { id: existingProduct.id, quantidade: restockQuantity, estoqueAtual: existingProduct.stock });
+        const novoEstoque = Number(existingProduct.stock) + Number(restockQuantity);
+        console.log('Novo estoque será:', novoEstoque);
+        const { data, error: updateError } = await supabase.from('products').update({
+          stock: novoEstoque
+        }).eq('id', existingProduct.id).select();
+        
+        console.log('Resposta da query:', { data, error: updateError });
+        if (updateError) {
+          console.error('Erro ao atualizar:', updateError);
+          throw updateError;
+        }
+        
+        // Verificar se realmente atualizou
+        const { data: verificacao } = await supabase.from('products').select('id, stock').eq('id', existingProduct.id).single();
+        console.log('Verificação após UPDATE:', verificacao);
+        
+        console.log('Atualização bem sucedida!');
+        setSuccess('Reabastecimento realizado com sucesso!');
+        setTimeout(() => {
+          setSuccess(null);
+          onSave();
+        }, 1200);
+        setLoading(false);
+        return;
+      }
       // Normalize all text fields to uppercase
       const normalizedName = form.name.toUpperCase();
       const normalizedCategory = (form.category === "__new__" ? newCategory : form.category).toUpperCase();
@@ -61,6 +112,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave }) => {
           price: Number(form.price),
           price_sale: Number(form.price_sale),
           stock: Number(form.stock),
+          barcode: form.barcode,
         }).eq('id', product.id);
       } else {
         // Insert
@@ -71,6 +123,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave }) => {
           price: Number(form.price),
           price_sale: Number(form.price_sale),
           stock: Number(form.stock),
+          barcode: form.barcode,
         });
       }
       setSuccess(product ? 'Produto atualizado com sucesso!' : 'Produto cadastrado com sucesso!');
@@ -79,7 +132,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave }) => {
         onSave();
       }, 1200);
     } catch (err: any) {
-      setError('Erro ao salvar produto.');
+      console.error('Erro ao salvar produto:', err);
+      setError('Erro ao salvar produto: ' + (err?.message || 'desconhecido'));
       setSuccess(null);
     } finally {
       setLoading(false);
@@ -88,6 +142,55 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave }) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 p-4">
+      <div>
+        <label className="block text-sm font-medium">Código de Barras</label>
+        <div className="flex gap-2">
+          <input 
+            name="barcode" 
+            value={form.barcode} 
+            onChange={e => {
+              handleChange(e);
+              checkBarcodeExists(e.target.value);
+            }} 
+            className="w-full border rounded px-3 py-2" 
+          />
+          <button type="button" onClick={() => setScannerOpen(true)} className="bg-blue-600 text-white px-3 py-2 rounded">Ler código</button>
+        </div>
+        {scannerOpen && (
+          <BarcodeScanner
+            onDetected={code => {
+              setForm(f => ({ ...f, barcode: code }));
+              checkBarcodeExists(code);
+              setScannerOpen(false);
+            }}
+            onClose={() => setScannerOpen(false)}
+          />
+        )}
+      </div>
+      {isRestocking && existingProduct && (
+        <div className="bg-blue-50 border border-blue-200 rounded p-4">
+          <h3 className="font-bold text-blue-900 mb-2">Modo Reabastecimento</h3>
+          <p className="text-sm text-blue-800 mb-3">
+            Produto: <span className="font-medium">{existingProduct.name}</span>
+          </p>
+          <p className="text-sm text-blue-800 mb-3">
+            Estoque atual: <span className="font-medium">{existingProduct.stock} unidades</span>
+          </p>
+          <div>
+            <label className="block text-sm font-medium">Quantidade a adicionar</label>
+            <input 
+              type="number" 
+              value={restockQuantity} 
+              onChange={e => setRestockQuantity(e.target.value)}
+              className="w-full border rounded px-3 py-2" 
+              required 
+              min="1"
+            />
+          </div>
+        </div>
+      )}
+      {!isRestocking && (
+        <>
       <div>
         <label className="block text-sm font-medium">Nome</label>
         <input name="name" value={form.name} onChange={handleChange} className="w-full border rounded px-3 py-2" required />
@@ -156,6 +259,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave }) => {
         <label className="block text-sm font-medium">Estoque (Quantidade)</label>
         <input name="stock" type="number" value={form.stock} onChange={handleChange} className="w-full border rounded px-3 py-2" required min="0" />
       </div>
+        </>
+      )}
       {error && <div className="text-red-600 text-sm">{error}</div>}
       {success && <div className="text-green-600 text-sm mb-2">{success}</div>}
       <button type="submit" className="bg-indigo-600 text-white px-4 py-2 rounded" disabled={loading || !!success}>

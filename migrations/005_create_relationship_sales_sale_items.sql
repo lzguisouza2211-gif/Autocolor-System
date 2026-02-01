@@ -24,3 +24,6 @@ ADD COLUMN deleted_at TIMESTAMP;
 
 -- Adiciona a coluna 'marca' à tabela products
 ALTER TABLE products ADD COLUMN mark TEXT;
+
+--Adiciona coluna codigo de barras
+ALTER TABLE products ADD COLUMN barcode VARCHAR(60);
