@@ -1,39 +1,14 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Icon } from '@iconify/react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../supabase';
 
-// Hook para simular as métricas do dashboard
-function useDashboardMetrics() {
-  return [
-    {
-      icon: <Icon icon="solar:box-linear" width={20} />, 
-      value: '1,248',
-      label: 'Produtos Cadastrados',
-      badge: '+12%',
-      badgeColor: 'emerald',
-    },
-    {
-      icon: <Icon icon="solar:bag-check-linear" width={20} />, 
-      value: 'R$ 48.2k',
-      label: 'Vendas (Mês)',
-      badge: '+5%',
-      badgeColor: 'emerald',
-    },
-    {
-      icon: <Icon icon="solar:danger-circle-linear" width={20} />, 
-      value: '8',
-      label: 'Estoque Crítico',
-      badge: 'Atenção',
-      badgeColor: 'orange',
-    },
-    {
-      icon: <Icon icon="solar:users-group-rounded-linear" width={20} />, 
-      value: '342',
-      label: 'Clientes Ativos',
-      badge: null,
-      badgeColor: 'slate',
-    },
-  ];
-}
+type MetricData = {
+  totalProducts: number;
+  totalSalesMonth: number;
+  criticalStock: number;
+  totalClients: number;
+};
 
 const badgeColors: Record<string, string> = {
   emerald: 'text-emerald-600 bg-emerald-50',
@@ -42,14 +17,108 @@ const badgeColors: Record<string, string> = {
 };
 
 const DashboardMetrics: React.FC = () => {
-  const metrics = useDashboardMetrics();
+  const navigate = useNavigate();
+  const [metrics, setMetrics] = useState<MetricData>({
+    totalProducts: 0,
+    totalSalesMonth: 0,
+    criticalStock: 0,
+    totalClients: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      setLoading(true);
+
+      // Total de produtos cadastrados (não deletados)
+      const { count: productsCount } = await supabase
+        .from('products')
+        .select('*', { count: 'exact', head: true })
+        .is('deleted_at', null);
+
+      // Total de vendas do mês atual
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+
+      const { data: salesData } = await supabase
+        .from('sales')
+        .select('total')
+        .gte('created_at', startOfMonth.toISOString());
+
+      const totalSales = salesData?.reduce((sum, sale) => sum + Number(sale.total), 0) || 0;
+
+      // Produtos com estoque crítico (<=10)
+      const { count: criticalCount } = await supabase
+        .from('products')
+        .select('*', { count: 'exact', head: true })
+        .is('deleted_at', null)
+        .lte('stock', 10);
+
+      // Total de clientes ativos (se existir tabela de clientes/users)
+      const { count: clientsCount } = await supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true });
+
+      setMetrics({
+        totalProducts: productsCount || 0,
+        totalSalesMonth: totalSales,
+        criticalStock: criticalCount || 0,
+        totalClients: clientsCount || 0,
+      });
+
+      setLoading(false);
+    };
+
+    fetchMetrics();
+  }, []);
+
+  const metricsData = [
+    {
+      icon: <Icon icon="solar:box-linear" width={20} />,
+      value: loading ? '...' : metrics.totalProducts.toLocaleString('pt-BR'),
+      label: 'Produtos Cadastrados',
+      badge: null,
+      badgeColor: 'emerald',
+      clickable: true,
+      onClick: () => navigate('/produtos'),
+    },
+    {
+      icon: <Icon icon="solar:bag-check-linear" width={20} />,
+      value: loading ? '...' : `R$ ${(metrics.totalSalesMonth / 1000).toFixed(1)}k`,
+      label: 'Vendas (Mês)',
+      badge: null,
+      badgeColor: 'emerald',
+      clickable: false,
+    },
+    {
+      icon: <Icon icon="solar:danger-circle-linear" width={20} />,
+      value: loading ? '...' : metrics.criticalStock.toString(),
+      label: 'Estoque Crítico',
+      badge: metrics.criticalStock > 0 ? 'Atenção' : null,
+      badgeColor: 'orange',
+      clickable: true,
+      onClick: () => navigate('/produtos?estoque=critico'),
+    },
+    {
+      icon: <Icon icon="solar:users-group-rounded-linear" width={20} />,
+      value: loading ? '...' : metrics.totalClients.toString(),
+      label: 'Clientes Ativos',
+      badge: null,
+      badgeColor: 'slate',
+      clickable: false,
+    },
+  ];
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {metrics.map((metric, idx) => (
+      {metricsData.map((metric, idx) => (
         <div
           key={idx}
-          className="bg-white p-5 rounded-xl border border-gray-200 shadow-[0_2px_10px_-4px_rgba(6,81,237,0.1)]"
+          onClick={metric.clickable ? metric.onClick : undefined}
+          className={`bg-white p-5 rounded-xl border border-gray-200 shadow-[0_2px_10px_-4px_rgba(6,81,237,0.1)] ${
+            metric.clickable ? 'cursor-pointer hover:shadow-lg hover:border-gray-300 transition-all' : ''
+          }`}
         >
           <div className="flex justify-between items-start mb-4">
             <div className={`p-2 rounded-lg ${badgeColors[metric.badgeColor]}`}>{metric.icon}</div>

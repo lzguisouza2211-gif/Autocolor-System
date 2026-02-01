@@ -13,8 +13,19 @@ const RecentSalesTable: React.FC = () => {
     setLoading(true);
     const { data: salesData, error } = await supabase
       .from('sales')
-      .select('id, total, created_at, sale_items ( product_id, quantidade, preco_unitario )')
-      .order('created_at', { ascending: false });
+      .select(`
+        id, 
+        total, 
+        created_at, 
+        sale_items (
+          product_id, 
+          quantidade, 
+          preco_unitario,
+          products (name)
+        )
+      `)
+      .order('created_at', { ascending: false })
+      .limit(10);
     if (!error && salesData) {
       setSales(salesData);
     }
@@ -63,10 +74,12 @@ const RecentSalesTable: React.FC = () => {
                   <td className="px-4 py-2 font-mono text-xs text-slate-400">#{sale.id}</td>
                   <td className="px-4 py-2 text-slate-500">
                     {sale.sale_items && sale.sale_items.length > 0
-                      ? sale.sale_items.map((item: any) => `${item.quantidade}x Produto ${item.product_id}`).join(', ')
+                      ? sale.sale_items.map((item: any) => 
+                          `${item.quantidade}x ${item.products?.name || `Produto ${item.product_id}`}`
+                        ).join(', ')
                       : '-'}
                   </td>
-                  <td className="px-4 py-2 text-slate-500">{new Date(sale.created_at).toLocaleDateString()}</td>
+                  <td className="px-4 py-2 text-slate-500">{new Date(sale.created_at).toLocaleDateString('pt-BR')}</td>
                   <td className="px-4 py-2 text-right font-normal text-slate-900">R$ {Number(sale.total).toFixed(2)}</td>
                 </tr>
               ))}

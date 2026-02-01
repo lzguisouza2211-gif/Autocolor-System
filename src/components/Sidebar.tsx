@@ -16,7 +16,7 @@ const Sidebar: React.FC = () => {
 
   return (
     <aside className="hidden lg:flex w-64 border-r border-gray-200 bg-white flex-col h-full sticky top-0">
-      <div className="h-16 flex items-center px-6 border-b border-gray-100">
+      <div className="h-16 flex items-center px-6">
         <div className="w-6 h-6 bg-slate-900 rounded flex items-center justify-center text-white text-xs font-medium mr-2">A</div>
         <span className="text-base font-medium tracking-tight text-slate-900">AutoColor</span>
       </div>
