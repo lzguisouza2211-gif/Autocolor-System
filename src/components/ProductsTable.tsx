@@ -9,6 +9,7 @@ type Product = {
   name: string;
   category: string;
   mark?: string;
+  barcode?: string;
   price: number;
   price_sale?: number;
   venda?: number; // legacy, fallback
@@ -64,7 +65,8 @@ const ProductsTable: React.FC = () => {
   const filteredProducts = products.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase()) ||
     (p.category || '').toLowerCase().includes(search.toLowerCase()) ||
-    (p.mark || '').toLowerCase().includes(search.toLowerCase())
+    (p.mark || '').toLowerCase().includes(search.toLowerCase()) ||
+    (p.barcode || '').toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -74,7 +76,7 @@ const ProductsTable: React.FC = () => {
           <Icon icon="solar:magnifer-linear" className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" width={16} />
           <input
             type="text"
-            placeholder="Buscar por nome ou categoria..."
+            placeholder="Buscar por nome, categoria, marca ou código..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
