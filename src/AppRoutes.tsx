@@ -5,6 +5,8 @@ import DashboardMetrics from './components/DashboardMetrics';
 import RecentSalesTable from './components/RecentSalesTable';
 import ProductsTable from './components/ProductsTable';
 import MobileMenu from './components/MobileMenu';
+import Login from './components/Login';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import './App.css';
 
 function VisaoGeral() {
@@ -38,7 +40,27 @@ function Vendas() {
   );
 }
 
-function App() {
+// Componente para proteger rotas
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <div className="text-slate-500">Carregando...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+// Layout principal com Sidebar
+function MainLayout({ children }: { children: React.ReactNode }) {
   const [dateTime, setDateTime] = useState<string>('');
 
   useEffect(() => {
@@ -56,43 +78,86 @@ function App() {
     };
 
     updateDateTime();
-    const interval = setInterval(updateDateTime, 60000); // Atualiza a cada minuto
+    const interval = setInterval(updateDateTime, 60000);
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <BrowserRouter>
-      <div className="bg-gray-50 text-slate-800 font-sans h-screen flex overflow-hidden">
-        <Sidebar />
-        <main className="flex-1 flex flex-col h-full overflow-hidden bg-gray-50/50 relative">
-          <header className="h-16 bg-white/80 backdrop-blur flex items-center justify-between px-4 lg:px-8 shrink-0 z-10">
-            <div className="flex items-center gap-3 flex-1 lg:flex-none">
-              <div className="lg:hidden">
-                <MobileMenu />
-              </div>
+    <div className="bg-gray-50 text-slate-800 font-sans h-screen flex overflow-hidden">
+      <Sidebar />
+      <main className="flex-1 flex flex-col h-full overflow-hidden bg-gray-50/50 relative">
+        <header className="h-16 bg-white/80 backdrop-blur flex items-center justify-between px-4 lg:px-8 shrink-0 z-10">
+          <div className="flex items-center gap-3 flex-1 lg:flex-none">
+            <div className="lg:hidden">
+              <MobileMenu />
             </div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-slate-600 hidden sm:inline">{dateTime}</span>
-              <button className="p-2 text-slate-400 hover:text-slate-600 relative" aria-label="Notificações">
-                <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                  <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-                  <path d="M13.73 21a2 2 0 01-3.46 0" />
-                </svg>
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
-              </button>
-            </div>
-          </header>
-          <div className="flex-1 overflow-y-auto overflow-x-hidden p-8">
-            <Routes>
-              <Route path="/" element={<Navigate to="/visao-geral" replace />} />
-              <Route path="/visao-geral" element={<VisaoGeral />} />
-              <Route path="/produtos" element={<Produtos />} />
-              <Route path="/vendas" element={<Vendas />} />
-            </Routes>
           </div>
-        </main>
-      </div>
-    </BrowserRouter>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-slate-600 hidden sm:inline">{dateTime}</span>
+            <button className="p-2 text-slate-400 hover:text-slate-600 relative" aria-label="Notificações">
+              <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 01-3.46 0" />
+              </svg>
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+            </button>
+          </div>
+        </header>
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-8">
+          {children}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Navigate to="/visao-geral" replace />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/visao-geral"
+            element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <VisaoGeral />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/produtos"
+            element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <Produtos />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/vendas"
+            element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <Vendas />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 

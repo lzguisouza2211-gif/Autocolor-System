@@ -1,18 +1,27 @@
 import React from 'react';
 import { Icon } from '@iconify/react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 // Hook para simular dados do usuário
 function useUser() {
+  const { user } = useAuth();
   return {
-    name: 'João Silva',
-    role: 'Gerente',
-    initials: 'JS',
+    name: user?.email?.split('@')[0] || 'Usuário',
+    role: 'Admin',
+    initials: user?.email?.substring(0, 2).toUpperCase() || 'AD',
   };
 }
 
 const Sidebar: React.FC = () => {
   const user = useUser();
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/login');
+  };
 
   return (
     <aside className="hidden lg:flex w-64 border-r border-gray-200 bg-white flex-col h-full sticky top-0">
@@ -51,13 +60,20 @@ const Sidebar: React.FC = () => {
         </NavLink>
       </div>
       <div className="p-4 border-t border-gray-100">
-        <div className="flex items-center gap-3 px-2 py-2">
+        <div className="flex items-center gap-3 px-2 py-2 mb-3">
           <div className="w-8 h-8 rounded-full bg-indigo-100 border border-indigo-200 flex items-center justify-center text-indigo-700 text-xs font-medium">{user.initials}</div>
           <div className="flex flex-col">
             <span className="text-xs font-medium text-slate-900">{user.name}</span>
             <span className="text-[10px] text-slate-500">{user.role}</span>
           </div>
         </div>
+        <button
+          onClick={handleSignOut}
+          className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-md transition-colors"
+        >
+          <Icon icon="solar:logout-2-linear" width={18} />
+          Sair
+        </button>
       </div>
     </aside>
   );
