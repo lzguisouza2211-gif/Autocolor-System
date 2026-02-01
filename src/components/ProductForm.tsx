@@ -141,9 +141,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 p-4">
+    <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4 p-3 sm:p-4 max-h-[80vh] overflow-y-auto">
       <div>
-        <label className="block text-sm font-medium">Código de Barras</label>
+        <label className="block text-xs sm:text-sm font-medium mb-1">Código de Barras</label>
         <div className="flex gap-2">
           <input 
             name="barcode" 
@@ -152,9 +152,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave }) => {
               handleChange(e);
               checkBarcodeExists(e.target.value);
             }} 
-            className="w-full border rounded px-3 py-2" 
+            className="w-full border rounded px-3 py-2 text-sm" 
           />
-          <button type="button" onClick={() => setScannerOpen(true)} className="bg-blue-600 text-white px-3 py-2 rounded">Ler código</button>
+          <button type="button" onClick={() => setScannerOpen(true)} className="bg-blue-600 text-white px-3 py-2 rounded text-xs sm:text-sm whitespace-nowrap">Ler código</button>
         </div>
         {scannerOpen && (
           <BarcodeScanner
@@ -168,21 +168,21 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave }) => {
         )}
       </div>
       {isRestocking && existingProduct && (
-        <div className="bg-blue-50 border border-blue-200 rounded p-4">
-          <h3 className="font-bold text-blue-900 mb-2">Modo Reabastecimento</h3>
-          <p className="text-sm text-blue-800 mb-3">
+        <div className="bg-blue-50 border border-blue-200 rounded p-3 sm:p-4">
+          <h3 className="font-bold text-blue-900 mb-2 text-sm sm:text-base">Modo Reabastecimento</h3>
+          <p className="text-xs sm:text-sm text-blue-800 mb-2 sm:mb-3">
             Produto: <span className="font-medium">{existingProduct.name}</span>
           </p>
-          <p className="text-sm text-blue-800 mb-3">
+          <p className="text-xs sm:text-sm text-blue-800 mb-2 sm:mb-3">
             Estoque atual: <span className="font-medium">{existingProduct.stock} unidades</span>
           </p>
           <div>
-            <label className="block text-sm font-medium">Quantidade a adicionar</label>
+            <label className="block text-xs sm:text-sm font-medium mb-1">Quantidade a adicionar</label>
             <input 
               type="number" 
               value={restockQuantity} 
               onChange={e => setRestockQuantity(e.target.value)}
-              className="w-full border rounded px-3 py-2" 
+              className="w-full border rounded px-3 py-2 text-sm" 
               required 
               min="1"
             />
@@ -192,16 +192,16 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave }) => {
       {!isRestocking && (
         <>
       <div>
-        <label className="block text-sm font-medium">Nome</label>
-        <input name="name" value={form.name} onChange={handleChange} className="w-full border rounded px-3 py-2" required />
+        <label className="block text-xs sm:text-sm font-medium mb-1">Nome</label>
+        <input name="name" value={form.name} onChange={handleChange} className="w-full border rounded px-3 py-2 text-sm" required />
       </div>
       <div>
-        <label className="block text-sm font-medium">Categoria</label>
+        <label className="block text-xs sm:text-sm font-medium mb-1">Categoria</label>
         <select
           name="category"
           value={form.category}
           onChange={e => setForm({ ...form, category: e.target.value })}
-          className="w-full border rounded px-3 py-2 mb-2"
+          className="w-full border rounded px-3 py-2 mb-2 text-sm"
           required
         >
           <option value="">Selecione uma categoria</option>
@@ -216,18 +216,18 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave }) => {
             placeholder="Nova categoria"
             value={newCategory}
             onChange={e => setNewCategory(e.target.value)}
-            className="w-full border rounded px-3 py-2 mt-2"
+            className="w-full border rounded px-3 py-2 mt-2 text-sm"
             required
           />
         )}
       </div>
       <div>
-        <label className="block text-sm font-medium">Marca</label>
+        <label className="block text-xs sm:text-sm font-medium mb-1">Marca</label>
         <select
           name="mark"
           value={form.mark}
           onChange={e => setForm({ ...form, mark: e.target.value })}
-          className="w-full border rounded px-3 py-2 mb-2"
+          className="w-full border rounded px-3 py-2 mb-2 text-sm"
           required
         >
           <option value="">Selecione uma marca</option>
@@ -242,28 +242,28 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave }) => {
             placeholder="Nova marca"
             value={newBrand}
             onChange={e => setNewBrand(e.target.value)}
-            className="w-full border rounded px-3 py-2 mt-2"
+            className="w-full border rounded px-3 py-2 mt-2 text-sm"
             required
           />
         )}
       </div>
       <div>
-        <label className="block text-sm font-medium">Preço de Custo</label>
-        <input name="price" type="number" value={form.price} onChange={handleChange} className="w-full border rounded px-3 py-2" required />
+        <label className="block text-xs sm:text-sm font-medium mb-1">Preço de Custo</label>
+        <input name="price" type="number" value={form.price} onChange={handleChange} className="w-full border rounded px-3 py-2 text-sm" required />
       </div>
       <div>
-        <label className="block text-sm font-medium">Preço de Venda</label>
-        <input name="price_sale" type="number" value={form.price_sale} onChange={handleChange} className="w-full border rounded px-3 py-2" required />
+        <label className="block text-xs sm:text-sm font-medium mb-1">Preço de Venda</label>
+        <input name="price_sale" type="number" value={form.price_sale} onChange={handleChange} className="w-full border rounded px-3 py-2 text-sm" required />
       </div>
       <div>
-        <label className="block text-sm font-medium">Estoque (Quantidade)</label>
-        <input name="stock" type="number" value={form.stock} onChange={handleChange} className="w-full border rounded px-3 py-2" required min="0" />
+        <label className="block text-xs sm:text-sm font-medium mb-1">Estoque (Quantidade)</label>
+        <input name="stock" type="number" value={form.stock} onChange={handleChange} className="w-full border rounded px-3 py-2 text-sm" required min="0" />
       </div>
         </>
       )}
-      {error && <div className="text-red-600 text-sm">{error}</div>}
-      {success && <div className="text-green-600 text-sm mb-2">{success}</div>}
-      <button type="submit" className="bg-indigo-600 text-white px-4 py-2 rounded" disabled={loading || !!success}>
+      {error && <div className="text-red-600 text-xs sm:text-sm">{error}</div>}
+      {success && <div className="text-green-600 text-xs sm:text-sm mb-2">{success}</div>}
+      <button type="submit" className="w-full bg-indigo-600 text-white px-4 py-2.5 rounded text-sm font-medium hover:bg-indigo-700" disabled={loading || !!success}>
         {loading ? 'Salvando...' : 'Salvar'}
       </button>
     </form>

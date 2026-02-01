@@ -116,17 +116,17 @@ const DashboardMetrics: React.FC = () => {
         <div
           key={idx}
           onClick={metric.clickable ? metric.onClick : undefined}
-          className={`bg-white p-5 rounded-xl border border-gray-200 shadow-[0_2px_10px_-4px_rgba(6,81,237,0.1)] ${
+          className={`bg-white p-4 sm:p-5 rounded-xl border border-gray-200 shadow-[0_2px_10px_-4px_rgba(6,81,237,0.1)] ${
             metric.clickable ? 'cursor-pointer hover:shadow-lg hover:border-gray-300 transition-all' : ''
           }`}
         >
-          <div className="flex justify-between items-start mb-4">
+          <div className="flex justify-between items-start mb-3 sm:mb-4">
             <div className={`p-2 rounded-lg ${badgeColors[metric.badgeColor]}`}>{metric.icon}</div>
             {metric.badge && (
               <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${badgeColors[metric.badgeColor]}`}>{metric.badge}</span>
             )}
           </div>
-          <div className="text-2xl font-semibold text-slate-900 tracking-tight">{metric.value}</div>
+          <div className="text-xl sm:text-2xl font-semibold text-slate-900 tracking-tight">{metric.value}</div>
           <div className="text-xs text-slate-500 mt-1">{metric.label}</div>
         </div>
       ))}

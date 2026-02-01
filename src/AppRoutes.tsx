@@ -4,19 +4,20 @@ import DashboardMetrics from './components/DashboardMetrics';
 import RecentSalesTable from './components/RecentSalesTable';
 import ProductsTable from './components/ProductsTable';
 import Header from './components/Header';
+import MobileMenu from './components/MobileMenu';
 import Login from './components/Login';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import './App.css';
 
 function VisaoGeral() {
   return (
-    <div className="space-y-6 fade-in">
-      <div className="flex items-end justify-between">
+    <div className="space-y-4 sm:space-y-6 fade-in">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
         <div>
-          <h1 className="text-xl font-medium tracking-tight text-slate-900">Visão Geral</h1>
-          <p className="text-sm text-slate-500 mt-1">Métricas de hoje</p>
+          <h1 className="text-lg sm:text-xl font-medium tracking-tight text-slate-900">Visão Geral</h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">Métricas de hoje</p>
         </div>
-        <button className="text-sm text-indigo-600 font-medium hover:text-indigo-700 flex items-center gap-1">
+        <button className="text-sm text-indigo-600 font-medium hover:text-indigo-700 flex items-center gap-1 self-start sm:self-auto">
           Relatórios
         </button>
       </div>
@@ -32,9 +33,9 @@ function Produtos() {
 
 function Vendas() {
   return (
-    <div className="space-y-6 fade-in">
-      <h1 className="text-xl font-medium tracking-tight text-slate-900">PDV / Vendas</h1>
-      <p className="text-sm text-slate-500 mt-1">Em breve: tela de vendas.</p>
+    <div className="space-y-4 sm:space-y-6 fade-in">
+      <h1 className="text-lg sm:text-xl font-medium tracking-tight text-slate-900">PDV / Vendas</h1>
+      <p className="text-xs sm:text-sm text-slate-500 mt-1">Em breve: tela de vendas.</p>
     </div>
   );
 }
@@ -65,14 +66,15 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 // Layout principal com Sidebar
 function MainLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-gray-50 text-slate-800 font-sans h-screen flex overflow-hidden">
+    <div className="bg-gray-50 text-slate-800 font-sans h-screen flex flex-col overflow-hidden lg:flex-row">
       <Sidebar />
       <main className="flex-1 flex flex-col h-full overflow-hidden bg-gray-50/50 relative">
         <Header />
-        <div className="flex-1 overflow-y-auto overflow-x-hidden p-8">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8">
           {children}
         </div>
       </main>
+      <MobileMenu />
     </div>
   );
 }

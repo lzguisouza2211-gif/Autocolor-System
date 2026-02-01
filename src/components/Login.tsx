@@ -109,7 +109,7 @@ const Login: React.FC = () => {
           {/* Info */}
           <div className="mt-6 pt-6 border-t border-gray-200">
             <p className="text-xs text-slate-500 text-center">
-              Usuário admin padrão: <strong>admin@autocolor.com</strong>
+              {new Date().toLocaleDateString('pt-BR')}
             </p>
           </div>
         </div>
