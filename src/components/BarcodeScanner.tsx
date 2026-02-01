@@ -19,14 +19,10 @@ const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onDetected, onClose }) 
         await codeReader.current!.decodeFromVideoDevice(
           videoInputDevices[0].deviceId,
           videoRef.current!,
-          (result, err) => {
+          (result) => {
             if (result) {
               onDetected(result.getText());
-              if (typeof codeReader.current?.reset === 'function') {
-                codeReader.current.reset();
-              } else if (typeof codeReader.current?.stopContinuousDecode === 'function') {
-                codeReader.current.stopContinuousDecode();
-              }
+              onClose();
             }
           }
         );
@@ -37,11 +33,7 @@ const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onDetected, onClose }) 
     };
     startScanner();
     return () => {
-      if (typeof codeReader.current?.reset === 'function') {
-        codeReader.current.reset();
-      } else if (typeof codeReader.current?.stopContinuousDecode === 'function') {
-        codeReader.current.stopContinuousDecode();
-      }
+      // Cleanup da câmera no desmonte do componente
     };
   }, [onDetected, onClose]);
 
