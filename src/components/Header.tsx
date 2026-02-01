@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import MobileMenu from './MobileMenu';
 
 const Header: React.FC = () => {
   const [dateTime, setDateTime] = useState<string>('');
@@ -26,9 +25,6 @@ const Header: React.FC = () => {
   return (
     <header className="h-16 bg-white/80 backdrop-blur flex items-center justify-between px-4 lg:px-8 shrink-0 z-10">
       <div className="flex items-center gap-3 flex-1 lg:flex-none">
-        <div className="lg:hidden">
-          <MobileMenu />
-        </div>
         <div className="flex items-center gap-2 lg:ml-0">
           <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center text-white text-sm font-medium">
             A

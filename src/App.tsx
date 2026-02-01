@@ -4,7 +4,6 @@ import Sidebar from './components/Sidebar';
 import DashboardMetrics from './components/DashboardMetrics';
 import RecentSalesTable from './components/RecentSalesTable';
 import ProductsTable from './components/ProductsTable';
-import MobileMenu from './components/MobileMenu';
 
 function App() {
   const [ tab ] = useState<string>("dashboard");
@@ -16,9 +15,6 @@ function App() {
         <header className="h-16 bg-white/80 backdrop-blur border-b border-gray-200 flex items-center px-4 lg:px-8 shrink-0 z-10">
           {/* Esquerda: menu e logo */}
           <div className="flex items-center gap-3 flex-1 lg:flex-none">
-            <div className="lg:hidden">
-              <MobileMenu />
-            </div>
             <span className="font-medium tracking-tight text-slate-900">AutoColor</span>
           </div>
           {/* Direita: notificações (mobile) */}

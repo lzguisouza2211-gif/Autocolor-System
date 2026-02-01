@@ -77,24 +77,26 @@ const SaleForm: React.FC<{ onSave: () => void }> = ({ onSave }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 p-4">
-      <h2 className="text-lg font-bold mb-2">Registrar Venda</h2>
+    <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4 p-3 sm:p-4 max-h-[80vh] overflow-y-auto">
+      <h2 className="text-base sm:text-lg font-bold mb-2">Registrar Venda</h2>
       {items.map((item, idx) => (
-        <div key={idx} className="flex gap-2 items-end">
-          <select className="border rounded px-2 py-1" value={item.product_id} onChange={e => handleProductSelect(idx, Number(e.target.value))} required>
+        <div key={idx} className="flex flex-col sm:flex-row gap-2 sm:items-end border-b pb-2 sm:border-0 sm:pb-0">
+          <select className="border rounded px-2 py-2 text-sm flex-1" value={item.product_id} onChange={e => handleProductSelect(idx, Number(e.target.value))} required>
             <option value="">Selecione o produto</option>
             {products.map(p => (
               <option key={p.id} value={p.id}>{p.nome}</option>
             ))}
           </select>
-          <input type="number" min={1} max={item.estoque} value={item.quantidade} onChange={e => handleItemChange(idx, 'quantidade', Number(e.target.value))} className="w-20 border rounded px-2 py-1" required />
-          <span className="text-sm">x R$ {item.preco_unitario?.toFixed(2) || '0.00'}</span>
-          <span className="text-xs text-slate-500">Estoque: {item.estoque}</span>
+          <input type="number" min={1} max={item.estoque} value={item.quantidade} onChange={e => handleItemChange(idx, 'quantidade', Number(e.target.value))} className="w-full sm:w-20 border rounded px-2 py-2 text-sm" placeholder="Qtd" required />
+          <div className="flex items-center justify-between sm:contents">
+            <span className="text-xs sm:text-sm">x R$ {item.preco_unitario?.toFixed(2) || '0.00'}</span>
+            <span className="text-xs text-slate-500">Estoque: {item.estoque}</span>
+          </div>
         </div>
       ))}
-      <button type="button" className="bg-slate-200 px-3 py-1 rounded" onClick={handleAddItem}>Adicionar Produto</button>
-      {error && <div className="text-red-600 text-sm">{error}</div>}
-      <button type="submit" className="bg-indigo-600 text-white px-4 py-2 rounded" disabled={loading || items.length === 0}>
+      <button type="button" className="w-full sm:w-auto bg-slate-200 px-3 py-2 rounded text-sm hover:bg-slate-300" onClick={handleAddItem}>Adicionar Produto</button>
+      {error && <div className="text-red-600 text-xs sm:text-sm">{error}</div>}
+      <button type="submit" className="w-full bg-indigo-600 text-white px-4 py-2.5 rounded text-sm font-medium hover:bg-indigo-700" disabled={loading || items.length === 0}>
         {loading ? 'Salvando...' : 'Registrar Venda'}
       </button>
     </form>
