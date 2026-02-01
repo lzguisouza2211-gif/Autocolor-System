@@ -158,11 +158,6 @@ const ProductsTable: React.FC = () => {
                         <div className="hidden sm:block w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                           <div className={`h-full ${estoqueColor}`} style={{ width: `${estoquePercent}%` }}></div>
                         </div>
-                        {product.stock <= 10 && (
-                          <span className={`hidden lg:inline ml-2 px-2 py-0.5 rounded ${product.stock <= 5 ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'} text-xs font-semibold`}>
-                            {product.stock <= 5 ? 'Estoque Mínimo' : 'Estoque Baixo'}
-                          </span>
-                        )}
                       </div>
                     </td>
                     <td className="px-3 sm:px-4 py-3 sm:py-4 text-right flex gap-2 justify-end">

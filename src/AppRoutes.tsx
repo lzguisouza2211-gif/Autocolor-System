@@ -15,7 +15,7 @@ function VisaoGeral() {
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
         <div>
           <h1 className="text-lg sm:text-xl font-medium tracking-tight text-slate-900">Visão Geral</h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">Métricas de hoje</p>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">Métricas</p>
         </div>
         <button className="text-sm text-indigo-600 font-medium hover:text-indigo-700 flex items-center gap-1 self-start sm:self-auto">
           Relatórios
