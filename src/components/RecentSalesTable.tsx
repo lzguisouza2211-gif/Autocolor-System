@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import SaleForm from './SaleForm';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 
-
-
 const RecentSalesTable: React.FC = () => {
-  const [showForm, setShowForm] = useState(false);
+  const navigate = useNavigate();
   const [sales, setSales] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -17,17 +15,22 @@ const RecentSalesTable: React.FC = () => {
         id, 
         total, 
         created_at, 
-        sale_items (
+        sale_items!fk_sale_items_sale_id (
           product_id, 
-          quantidade, 
-          preco_unitario,
+          quantity, 
+          price,
+          original_price,
+          discount,
           products (name)
         )
       `)
       .order('created_at', { ascending: false })
       .limit(10);
+    
     if (!error && salesData) {
       setSales(salesData);
+    } else {
+      console.error('Erro ao buscar vendas:', error);
     }
     setLoading(false);
   };
@@ -41,20 +44,10 @@ const RecentSalesTable: React.FC = () => {
       <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <h3 className="font-medium text-slate-900 text-sm sm:text-base">Vendas Recentes</h3>
         <div className="flex gap-2">
-          <button className="text-xs text-slate-500 hover:text-slate-900" onClick={() => setShowForm(true)}>Registrar Venda</button>
-          <button className="text-xs text-slate-500 hover:text-slate-900">Ver todas</button>
+          <button className="text-xs text-slate-500 hover:text-slate-900" onClick={() => navigate('/vendas')}>Registrar Venda</button>
+          <button className="text-xs text-slate-500 hover:text-slate-900" onClick={() => navigate('/historico-vendas')}>Ver todas</button>
         </div>
       </div>
-      {showForm && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <SaleForm onSave={() => setShowForm(false)} />
-            <button className="absolute top-2 right-2 text-slate-400 hover:text-slate-600" onClick={() => setShowForm(false)}>
-              ×
-            </button>
-          </div>
-        </div>
-      )}
       <div className="overflow-x-auto">
         {loading ? (
           <div className="p-8 text-center text-slate-400">Carregando vendas...</div>
@@ -75,7 +68,7 @@ const RecentSalesTable: React.FC = () => {
                   <td className="px-3 sm:px-4 py-2 text-slate-500 text-xs sm:text-sm">
                     {sale.sale_items && sale.sale_items.length > 0
                       ? sale.sale_items.map((item: any) => 
-                          `${item.quantidade}x ${item.products?.name || `Produto ${item.product_id}`}`
+                          `${item.quantity}x ${item.products?.name || `Produto ${item.product_id}`}`
                         ).join(', ')
                       : '-'}
                   </td>

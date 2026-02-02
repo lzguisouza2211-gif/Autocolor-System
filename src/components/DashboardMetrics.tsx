@@ -55,16 +55,13 @@ const DashboardMetrics: React.FC = () => {
         .is('deleted_at', null)
         .lte('stock', 10);
 
-      // Total de clientes ativos (se existir tabela de clientes/users)
-      const { count: clientsCount } = await supabase
-        .from('users')
-        .select('*', { count: 'exact', head: true });
+      // Total de clientes ativos - removido (users são funcionários/admins, não clientes)
 
       setMetrics({
         totalProducts: productsCount || 0,
         totalSalesMonth: totalSales,
         criticalStock: criticalCount || 0,
-        totalClients: clientsCount || 0,
+        totalClients: 0, // Desabilitado - não há tabela de clientes
       });
 
       setLoading(false);
@@ -89,7 +86,8 @@ const DashboardMetrics: React.FC = () => {
       label: 'Vendas (Mês)',
       badge: null,
       badgeColor: 'emerald',
-      clickable: false,
+      clickable: true,
+      onClick: () => navigate('/historico-vendas'),
     },
     {
       icon: <Icon icon="solar:danger-circle-linear" width={20} />,

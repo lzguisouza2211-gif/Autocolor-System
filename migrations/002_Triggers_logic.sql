@@ -42,7 +42,7 @@ BEGIN
     VALUES (NEW.product_id, 'sale', -NEW.quantity, NEW.user_id, NEW.sale_id);
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+SET search_path = public
 
 CREATE TRIGGER trg_log_stock_change_on_sale
 AFTER INSERT ON sale_items
@@ -55,8 +55,8 @@ BEGIN
     INSERT INTO stock_audit (product_id, change_type, quantity_changed, user_id)
     VALUES (NEW.product_id, 'adjustment', NEW.quantity_changed, NEW.user_id);
     RETURN NEW;
+SET search_path = public
 END;
-$$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trg_log_stock_change_on_adjustment
 AFTER UPDATE ON products

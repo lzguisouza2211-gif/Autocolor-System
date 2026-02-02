@@ -8,13 +8,13 @@ CREATE TABLE products (
     price DECIMAL(10, 2) NOT NULL,
     stock INT DEFAULT 0
 );
-
+--table sales
 CREATE TABLE sales (
     id SERIAL PRIMARY KEY,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     total DECIMAL(10, 2) NOT NULL
 );
-
+--table sale_items
 create table sale_items (
     id SERIAL PRIMARY KEY,
     sale_id INT REFERENCES sales(id) ON DELETE CASCADE,
