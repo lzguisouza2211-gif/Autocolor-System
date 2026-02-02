@@ -8,6 +8,7 @@ import MobileMenu from './components/MobileMenu';
 import Login from './components/Login';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import PDV from './components/PDV';
+import SalesHistory from './components/SalesHistory';
 import './App.css';
 
 function VisaoGeral() {
@@ -123,6 +124,16 @@ function App() {
                 <PDVLayout>
                   <PDV />
                 </PDVLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/historico-vendas"
+            element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <SalesHistory />
+                </MainLayout>
               </ProtectedRoute>
             }
           />
