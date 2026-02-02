@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { FiTrash2 } from 'react-icons/fi';
 import { supabase } from '../supabase';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Product {
   id: number;
@@ -32,6 +33,7 @@ interface CartItem {
 
 const PDV: React.FC = () => {
   // Estados
+  const { user } = useAuth();
   const [search, setSearch] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -199,13 +201,17 @@ const PDV: React.FC = () => {
       setError('Carrinho vazio');
       return;
     }
+    if (!user) {
+      setError('Usuário não autenticado');
+      return;
+    }
     setFinalizing(true);
     setError(null);
     setSuccess(null);
     // 1. Inserir sale
     const { data: sale, error: saleError } = await supabase
       .from('sales')
-      .insert([{ total }])
+      .insert([{ total, user_id: user.id }])
       .select('id')
       .single();
     if (saleError || !sale) {
@@ -236,8 +242,8 @@ const PDV: React.FC = () => {
   return (
     <div className="w-full h-full p-0 m-0">
       <div className="w-full h-full grid grid-cols-1 lg:grid-cols-[42%_58%] gap-0 bg-transparent">
-        {/* Coluna esquerda: busca e resultados */}
-        <div className="flex flex-col h-full bg-white p-6 lg:p-10">
+        {/* Coluna esquerda: busca e resultados - APENAS DESKTOP */}
+        <div className="hidden lg:flex flex-col h-full bg-white p-10">
           <div className="flex items-center justify-between mb-4">
             <div className="font-semibold text-xl md:text-2xl">Pedido {pedidoNumero}</div>
             <button
@@ -295,9 +301,54 @@ const PDV: React.FC = () => {
           )}
         </div>
 
-        {/* Coluna direita: carrinho e resumo */}
-        <div className="flex flex-col h-full bg-white p-6 lg:p-10">
-          <div className="flex-1 overflow-y-auto">
+        {/* Coluna direita: carrinho e resumo - TELA TODA NO MOBILE */}
+        <div className="flex flex-col h-full bg-white p-4 lg:p-10 overflow-hidden">
+          {/* Busca no mobile - no topo do carrinho */}
+          <div className="lg:hidden mb-4 shrink-0">
+            <div className="flex items-center justify-between mb-3">
+              <div className="font-semibold text-lg">Pedido {pedidoNumero}</div>
+              <button
+                className="p-2 rounded-full hover:bg-gray-100 text-gray-500"
+                onClick={clearCart}
+                title="Limpar carrinho"
+                disabled={cart.length === 0 || finalizing}
+              >
+                <FiTrash2 size={20} />
+              </button>
+            </div>
+            <div className="relative w-full">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16Z"/></svg>
+              </span>
+              <input
+                ref={inputRef}
+                type="text"
+                className="w-full pl-10 pr-4 py-2.5 text-sm rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                placeholder="Buscar produto..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                maxLength={100}
+                disabled={loading || finalizing}
+              />
+            </div>
+            {search.length > 0 && filteredProducts.length > 0 && (
+              <ul className="bg-white border rounded-lg shadow max-h-[200px] overflow-y-auto mt-2 z-10 relative divide-y">
+                {filteredProducts.map((prod) => (
+                  <li
+                    key={prod.id}
+                    className="p-2 hover:bg-blue-50 cursor-pointer flex items-center gap-3 text-sm"
+                    onClick={() => addToCart(prod)}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-slate-900 truncate">{prod.name}</div>
+                      <div className="text-xs text-gray-500">R$ {(prod.price_sale ?? prod.price).toFixed(2)}</div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div className="flex-1 overflow-y-auto min-h-0">
             {/* Cabeçalho - apenas desktop */}
             {cart.length > 0 && (
               <div className="hidden lg:grid grid-cols-[28px_2.4fr_0.8fr_1fr_1.2fr] gap-3 text-xs text-gray-500 uppercase tracking-wide pb-2 border-b">
@@ -446,7 +497,7 @@ const PDV: React.FC = () => {
               </ul>
             )}
           </div>
-          <div className="border-t pt-4 mt-4 space-y-2 bg-white">
+          <div className="border-t pt-4 space-y-2 bg-white shrink-0">
             <div className="flex justify-between text-sm text-gray-600">
               <span>Subtotal</span>
               <span>R$ {subtotal.toFixed(2)}</span>
