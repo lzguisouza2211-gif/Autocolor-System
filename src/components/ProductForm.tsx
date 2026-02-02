@@ -73,14 +73,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave }) => {
     try {
       // Se está em modo reabastecimento
       if (isRestocking && existingProduct) {
-        console.log('Modo reabastecimento:', { id: existingProduct.id, quantidade: restockQuantity, estoqueAtual: existingProduct.stock });
         const novoEstoque = Number(existingProduct.stock) + Number(restockQuantity);
-        console.log('Novo estoque será:', novoEstoque);
         const { data, error: updateError } = await supabase.from('products').update({
           stock: novoEstoque
         }).eq('id', existingProduct.id).select();
         
-        console.log('Resposta da query:', { data, error: updateError });
         if (updateError) {
           console.error('Erro ao atualizar:', updateError);
           throw updateError;
@@ -88,7 +85,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave }) => {
         
         // Verificar se realmente atualizou
         const { data: verificacao } = await supabase.from('products').select('id, stock').eq('id', existingProduct.id).single();
-        console.log('Verificação após UPDATE:', verificacao);
         
         console.log('Atualização bem sucedida!');
         setSuccess('Reabastecimento realizado com sucesso!');

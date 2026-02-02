@@ -7,6 +7,7 @@ import Header from './components/Header';
 import MobileMenu from './components/MobileMenu';
 import Login from './components/Login';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import PDV from './components/PDV';
 import './App.css';
 
 function VisaoGeral() {
@@ -30,23 +31,9 @@ function VisaoGeral() {
 function Produtos() {
   return <ProductsTable />;
 }
-
-function Vendas() {
-  return (
-    <div className="space-y-4 sm:space-y-6 fade-in">
-      <h1 className="text-lg sm:text-xl font-medium tracking-tight text-slate-900">PDV / Vendas</h1>
-      <p className="text-xs sm:text-sm text-slate-500 mt-1">Em breve: tela de vendas.</p>
-    </div>
-  );
-}
-
 // Componente para proteger rotas
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-
-  // Debug: verificar autenticação
-  console.log('🔐 User:', user);
-  console.log('🔐 Loading:', loading);
 
   if (loading) {
     return (
@@ -118,7 +105,7 @@ function App() {
             element={
               <ProtectedRoute>
                 <MainLayout>
-                  <Vendas />
+                  <PDV />
                 </MainLayout>
               </ProtectedRoute>
             }

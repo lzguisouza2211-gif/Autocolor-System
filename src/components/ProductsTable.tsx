@@ -126,7 +126,7 @@ const ProductsTable: React.FC = () => {
             <tbody className="divide-y divide-gray-100">
               {filteredProducts.map((product) => {
                 // Barra de estoque
-                const estoquePercent = Math.min(100, Math.round((product.stock / 100) * 100));
+                const estoquePercent = Math.min(100, Math.round((product.stock / 10) * 100));
                 let estoqueColor = 'bg-emerald-500';
                 if (product.stock <= 5) estoqueColor = 'bg-red-500';
                 else if (product.stock <= 10) estoqueColor = 'bg-yellow-400';
