@@ -2,11 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 
-
-
 const RecentSalesTable: React.FC = () => {
   const navigate = useNavigate();
-  const [showForm, setShowForm] = useState(false);
   const [sales, setSales] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -51,16 +48,6 @@ const RecentSalesTable: React.FC = () => {
           <button className="text-xs text-slate-500 hover:text-slate-900" onClick={() => navigate('/historico-vendas')}>Ver todas</button>
         </div>
       </div>
-      {showForm && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <SaleForm onSave={() => setShowForm(false)} />
-            <button className="absolute top-2 right-2 text-slate-400 hover:text-slate-600" onClick={() => setShowForm(false)}>
-              ×
-            </button>
-          </div>
-        </div>
-      )}
       <div className="overflow-x-auto">
         {loading ? (
           <div className="p-8 text-center text-slate-400">Carregando vendas...</div>

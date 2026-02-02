@@ -55,7 +55,7 @@ const SalesHistory: React.FC = () => {
         id, 
         total, 
         created_at,
-        users (name, email),
+        user_id,
         sale_items!fk_sale_items_sale_id (
           product_id, 
           quantity, 
@@ -68,7 +68,21 @@ const SalesHistory: React.FC = () => {
       .order('created_at', { ascending: false });
 
     if (salesData) {
-      setSales(salesData);
+      // Buscar informações dos usuários manualmente
+      const salesWithUsers = await Promise.all(
+        salesData.map(async (sale) => {
+          if (sale.user_id) {
+            const { data: userData } = await supabase
+              .from('users')
+              .select('name, email')
+              .eq('id', sale.user_id)
+              .single();
+            return { ...sale, users: userData };
+          }
+          return { ...sale, users: null };
+        })
+      );
+      setSales(salesWithUsers as any);
     }
     setLoading(false);
   };
