@@ -46,6 +46,14 @@ const PDV: React.FC = () => {
   // Número do pedido fictício (poderia ser gerado do backend futuramente)
   const pedidoNumero = cart.length > 0 ? `#${4000 + 22}` : 'Novo Pedido';
 
+  // Formatar valor com 2 dígitos mínimo antes da vírgula e 2 depois
+  const formatCurrency = (value: number): string => {
+    const formatted = value.toFixed(2);
+    const [intPart, decPart] = formatted.split('.');
+    const paddedInt = intPart.padStart(2, '0');
+    return `${paddedInt}.${decPart}`;
+  };
+
   // Carregar todos os produtos ao abrir o PDV
   useEffect(() => {
     supabase
@@ -229,7 +237,7 @@ const PDV: React.FC = () => {
     <div className="w-full h-full p-0 m-0">
       <div className="w-full h-full grid grid-cols-1 lg:grid-cols-[42%_58%] gap-0 bg-transparent">
         {/* Coluna esquerda: busca e resultados */}
-        <div className="flex flex-col h-full bg-white rounded-none lg:rounded-l-xl shadow-md lg:shadow-none p-6 lg:p-10 border-r border-gray-100">
+        <div className="flex flex-col h-full bg-white p-6 lg:p-10">
           <div className="flex items-center justify-between mb-4">
             <div className="font-semibold text-xl md:text-2xl">Pedido {pedidoNumero}</div>
             <button
@@ -288,11 +296,11 @@ const PDV: React.FC = () => {
         </div>
 
         {/* Coluna direita: carrinho e resumo */}
-        <div className="flex flex-col h-full bg-white rounded-none lg:rounded-r-xl shadow-md lg:shadow-none p-6 lg:p-10">
+        <div className="flex flex-col h-full bg-white p-6 lg:p-10">
           <div className="flex-1 overflow-y-auto">
             {/* Cabeçalho - apenas desktop */}
             {cart.length > 0 && (
-              <div className="hidden lg:grid grid-cols-[32px_2.6fr_0.9fr_0.9fr_0.9fr] gap-4 text-xs text-gray-500 uppercase tracking-wide pb-2 border-b">
+              <div className="hidden lg:grid grid-cols-[28px_2.4fr_0.8fr_1fr_1.2fr] gap-3 text-xs text-gray-500 uppercase tracking-wide pb-2 border-b">
                 <span></span>
                 <span>Produto</span>
                 <span className="text-center">Quantidade</span>
@@ -307,7 +315,7 @@ const PDV: React.FC = () => {
                 {cart.map((item) => (
                   <li key={item.product_id} className="py-4">
                     {/* Layout Desktop */}
-                    <div className="hidden lg:grid grid-cols-[32px_2.6fr_0.9fr_0.9fr_0.9fr] gap-4 items-center">
+                    <div className="hidden lg:grid grid-cols-[28px_2.4fr_0.8fr_1fr_1.2fr] gap-3 items-center">
                       <div className="flex items-center justify-center">
                         <button
                           className="p-1.5 rounded-full hover:bg-red-100 text-red-500"
@@ -342,8 +350,7 @@ const PDV: React.FC = () => {
                           >+</button>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-xs text-gray-500">Unitário</div>
+                      <div className="text-right flex items-center justify-end">
                         <input
                           type="number"
                           min={0}
@@ -351,19 +358,20 @@ const PDV: React.FC = () => {
                           value={Number(item.price_sale.toFixed(2))}
                           onChange={(e) => updateUnitPrice(item.product_id, Number(e.target.value))}
                           disabled={finalizing}
-                          className="w-20 text-right text-sm font-medium text-slate-900 border border-gray-200 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-200"
+                          className="w-full text-right text-sm font-medium text-slate-900 border border-gray-200 rounded px-0.2 py-0.2 focus:outline-none focus:ring-1 focus:ring-blue-200"
                         />
                       </div>
-                      <div className="text-right">
-                        <div className="text-xs text-gray-500">Total</div>
+                      <div className="text-right flex items-center justify-end gap-1">
+                        <span className="text-sm text-gray-500">R$</span>
                         <input
-                          type="number"
-                          min={0}
-                          step="0.01"
-                          value={Number(item.subtotal.toFixed(2))}
-                          onChange={(e) => updateTotalPrice(item.product_id, Number(e.target.value))}
+                          type="text"
+                          value={formatCurrency(item.subtotal)}
+                          onChange={(e) => {
+                            const numValue = parseFloat(e.target.value.replace(/[^0-9.]/g, ''));
+                            if (!isNaN(numValue)) updateTotalPrice(item.product_id, numValue);
+                          }}
                           disabled={finalizing}
-                          className="w-24 text-right text-sm font-bold text-slate-900 border border-gray-200 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-200"
+                          className="w-full text-right text-sm font-bold text-slate-900 border border-gray-200 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-200"
                         />
                       </div>
                     </div>
@@ -422,11 +430,12 @@ const PDV: React.FC = () => {
                       <div>
                         <div className="text-xs text-gray-500 mb-1">Total</div>
                         <input
-                          type="number"
-                          min={0}
-                          step="0.01"
-                          value={Number(item.subtotal.toFixed(2))}
-                          onChange={(e) => updateTotalPrice(item.product_id, Number(e.target.value))}
+                          type="text"
+                          value={`R$ ${formatCurrency(item.subtotal)}`}
+                          onChange={(e) => {
+                            const numValue = parseFloat(e.target.value.replace(/[^0-9.]/g, ''));
+                            if (!isNaN(numValue)) updateTotalPrice(item.product_id, numValue);
+                          }}
                           disabled={finalizing}
                           className="w-full text-left text-base font-bold text-slate-900 border border-gray-200 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-200"
                         />

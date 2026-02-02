@@ -66,6 +66,22 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Layout sem padding para PDV
+function PDVLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="bg-gray-50 text-slate-800 font-sans h-screen flex flex-col overflow-hidden lg:flex-row">
+      <Sidebar />
+      <main className="flex-1 flex flex-col h-full overflow-hidden bg-white relative">
+        <Header />
+        <div className="flex-1 overflow-hidden">
+          {children}
+        </div>
+      </main>
+      <MobileMenu />
+    </div>
+  );
+}
+
 function App() {
   return (
     <AuthProvider>
@@ -104,9 +120,9 @@ function App() {
             path="/vendas"
             element={
               <ProtectedRoute>
-                <MainLayout>
+                <PDVLayout>
                   <PDV />
-                </MainLayout>
+                </PDVLayout>
               </ProtectedRoute>
             }
           />
