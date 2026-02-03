@@ -12,15 +12,51 @@ const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onDetected, onClose }) 
   const videoRef = useRef<HTMLDivElement>(null);
   const detectionCountRef = useRef<{ [key: string]: number }>({});
 
-  // Valida o dígito verificador de códigos EAN-13 e UPC
+  // Remove caracteres inesperados e limpa o código
+  const normalizeBarcode = (code: string): string => {
+    if (!code) return '';
+    // Remove espaços, hífens, caracteres especiais e mantém apenas números
+    return code.replace(/[^\d]/g, '').trim();
+  };
+
+  // Identifica o tipo/padrão do código de barras
+  const identifyBarcodeType = (code: string): string => {
+    const cleanCode = normalizeBarcode(code);
+    const length = cleanCode.length;
+
+    if (length === 8) return 'EAN-8';
+    if (length === 12) return 'UPC-A';
+    if (length === 13) return 'EAN-13';
+    if (length === 14) return 'GTIN-14 (ITF-14)';
+    if (length > 13) return 'Code-128';
+    return 'Desconhecido';
+  };
+
+  // Valida o dígito verificador (compatível com EAN-13, EAN-8, UPC-A)
   const isValidBarcode = (code: string): boolean => {
-    if (!code || (code.length !== 13 && code.length !== 12 && code.length !== 8)) {
+    const cleanCode = normalizeBarcode(code);
+    
+    // Verifica se contém apenas dígitos
+    if (!/^\d+$/.test(cleanCode)) {
+      console.warn('❌ Código contém caracteres não numéricos:', code);
       return false;
     }
 
-    const digits = code.split('').map(Number);
-    if (digits.some(isNaN)) return false;
+    // Aceita comprimentos válidos: 8 (EAN-8), 12 (UPC-A), 13 (EAN-13), 14 (GTIN-14)
+    const validLengths = [8, 12, 13, 14];
+    if (!validLengths.includes(cleanCode.length)) {
+      console.warn(`❌ Comprimento inválido: ${cleanCode.length}. Esperado: 8, 12, 13 ou 14 dígitos`);
+      return false;
+    }
 
+    // Code-128 não usa dígito verificador padrão, apenas valida por comprimento
+    if (cleanCode.length > 14) {
+      console.log('✅ Code-128 válido por comprimento');
+      return true;
+    }
+
+    // Calcula e valida o dígito verificador para EAN/UPC
+    const digits = cleanCode.split('').map(Number);
     const checkDigit = digits.pop()!;
     let sum = 0;
 
@@ -29,7 +65,19 @@ const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onDetected, onClose }) 
     });
 
     const calculatedCheck = (10 - (sum % 10)) % 10;
-    return calculatedCheck === checkDigit;
+    const isValid = calculatedCheck === checkDigit;
+
+    if (!isValid) {
+      console.warn(
+        `❌ Dígito verificador inválido. Esperado: ${calculatedCheck}, Recebido: ${checkDigit}`
+      );
+    } else {
+      console.log(
+        `✅ ${identifyBarcodeType(cleanCode)} válido: ${cleanCode}`
+      );
+    }
+
+    return isValid;
   };
 
   useEffect(() => {
@@ -65,19 +113,39 @@ const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onDetected, onClose }) 
 
     Quagga.onDetected((data: any) => {
       if (data && data.codeResult && data.codeResult.code) {
-        const code = data.codeResult.code;
+        // Limpa e normaliza o código
+        const rawCode = data.codeResult.code;
+        const cleanCode = normalizeBarcode(rawCode);
         const quality = data.codeResult.quality || 0;
         
+        if (!cleanCode) {
+          console.warn('⚠️ Código vazio após limpeza');
+          return;
+        }
+
         // Validações de qualidade
-        if (quality < 75) return;
-        if (!isValidBarcode(code)) return; // Valida dígito verificador
+        if (quality < 75) {
+          console.warn(`⚠️ Qualidade baixa: ${quality.toFixed(1)}%`);
+          return;
+        }
+
+        // Valida se é um código de barras legítimo
+        if (!isValidBarcode(cleanCode)) {
+          return;
+        }
         
         // Conta quantas vezes o mesmo código foi detectado
-        detectionCountRef.current[code] = (detectionCountRef.current[code] || 0) + 1;
+        detectionCountRef.current[cleanCode] = (detectionCountRef.current[cleanCode] || 0) + 1;
+        const detectionCount = detectionCountRef.current[cleanCode];
+        
+        console.log(
+          `🔍 ${identifyBarcodeType(cleanCode)} detectado: ${cleanCode} (${detectionCount}/3)`
+        );
         
         // Só aceita o código após 3 detecções consecutivas
-        if (detectionCountRef.current[code] >= 3) {
-          onDetected(code);
+        if (detectionCount >= 3) {
+          console.log(`✅ Código aceito e enviado: ${cleanCode}`);
+          onDetected(cleanCode);
           Quagga.stop();
           Quagga.offDetected();
         }
