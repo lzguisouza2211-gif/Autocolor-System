@@ -34,15 +34,18 @@ CREATE TRIGGER trg_warn_low_stock
 BEFORE INSERT OR UPDATE ON sale_items
 FOR EACH ROW EXECUTE FUNCTION warn_low_stock();
 
--- Trigger para registrar alterações no estoque ao realizar uma venda
+
 CREATE OR REPLACE FUNCTION log_stock_change_on_sale()
 RETURNS TRIGGER AS $$
+DECLARE
+    v_user_id UUID;
 BEGIN
+    SELECT user_id INTO v_user_id FROM sales WHERE id = NEW.sale_id;
     INSERT INTO stock_audit (product_id, change_type, quantity_changed, user_id, sale_id)
-    VALUES (NEW.product_id, 'sale', -NEW.quantity, NEW.user_id, NEW.sale_id);
+    VALUES (NEW.product_id, 'sale', -NEW.quantity, v_user_id, NEW.sale_id);
     RETURN NEW;
 END;
-SET search_path = public
+$$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trg_log_stock_change_on_sale
 AFTER INSERT ON sale_items
@@ -53,10 +56,10 @@ CREATE OR REPLACE FUNCTION log_stock_change_on_adjustment()
 RETURNS TRIGGER AS $$
 BEGIN
     INSERT INTO stock_audit (product_id, change_type, quantity_changed, user_id)
-    VALUES (NEW.product_id, 'adjustment', NEW.quantity_changed, NEW.user_id);
+    VALUES (NEW.id, 'adjustment', NEW.stock, auth.uid());
     RETURN NEW;
-SET search_path = public
 END;
+$$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trg_log_stock_change_on_adjustment
 AFTER UPDATE ON products

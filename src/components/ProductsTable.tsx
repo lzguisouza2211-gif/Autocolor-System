@@ -61,7 +61,19 @@ const ProductsTable: React.FC = () => {
 
   // Soft delete
   const handleDelete = async (productId: number) => {
-    await supabase.from('products').update({ deleted_at: new Date().toISOString() }).eq('id', productId);
+    if (!confirm('Tem certeza que deseja excluir este produto?')) {
+      return;
+    }
+    const { error } = await supabase
+      .from('products')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', productId);
+    
+    if (error) {
+      console.error('Erro ao excluir produto:', error);
+      alert('Erro ao excluir produto: ' + error.message);
+      return;
+    }
     fetchProducts();
   };
 

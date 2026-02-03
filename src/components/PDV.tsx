@@ -208,35 +208,67 @@ const PDV: React.FC = () => {
     setFinalizing(true);
     setError(null);
     setSuccess(null);
-    // 1. Inserir sale
-    const { data: sale, error: saleError } = await supabase
-      .from('sales')
-      .insert([{ total, user_id: user.id }])
-      .select('id')
-      .single();
-    if (saleError || !sale) {
-      setError('Erro ao registrar venda');
+    
+    try {
+      // 1. Inserir sale
+      const { data: sale, error: saleError } = await supabase
+        .from('sales')
+        .insert([{ total, user_id: user.id }])
+        .select('id')
+        .single();
+      
+      if (saleError) {
+        console.error('Erro ao registrar venda:', saleError);
+        setError('Erro ao registrar venda: ' + saleError.message);
+        setFinalizing(false);
+        return;
+      }
+      
+      if (!sale) {
+        setError('Erro ao registrar venda: resposta vazia');
+        setFinalizing(false);
+        return;
+      }
+      
+      // 2. Inserir sale_items
+      const items = cart.map((item) => ({
+        sale_id: sale.id,
+        product_id: item.product_id,
+        quantity: item.quantity,
+        price: item.price_sale,
+        original_price: item.original_price,
+        discount: item.discount,
+      }));
+      
+      console.log('=== DETALHES DA INSERÇÃO ===');
+      console.log('Sale ID:', sale.id);
+      console.log('Itens a inserir:', JSON.stringify(items, null, 2));
+      console.log('Primeiro item:', items[0]);
+      
+      const { data: insertedItems, error: itemsError } = await supabase
+        .from('sale_items')
+        .insert(items)
+        .select();
+      
+      if (itemsError) {
+        console.error('Erro ao registrar itens da venda:', itemsError);
+        console.error('Detalhes do erro:', JSON.stringify(itemsError, null, 2));
+        setError(`Erro ao registrar itens da venda: ${itemsError.message}${itemsError.hint ? ` (${itemsError.hint})` : ''}`);
+        setFinalizing(false);
+        return;
+      }
+      
+      console.log('Itens inseridos com sucesso:', insertedItems);
+      
+      setSuccess('Venda registrada com sucesso!');
+      setCart([]);
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      console.error('Erro inesperado ao finalizar venda:', err);
+      setError('Erro inesperado ao finalizar venda');
+    } finally {
       setFinalizing(false);
-      return;
     }
-    // 2. Inserir sale_items
-    const items = cart.map((item) => ({
-      sale_id: sale.id,
-      product_id: item.product_id,
-      quantity: item.quantity,
-      price: item.price_sale,
-      original_price: item.original_price,
-      discount: item.discount,
-    }));
-    const { error: itemsError } = await supabase.from('sale_items').insert(items);
-    if (itemsError) {
-      setError('Erro ao registrar itens da venda');
-      setFinalizing(false);
-      return;
-    }
-    setSuccess('Venda registrada com sucesso!');
-    setCart([]);
-    setFinalizing(false);
   };
 
   return (
