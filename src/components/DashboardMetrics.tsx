@@ -82,7 +82,7 @@ const DashboardMetrics: React.FC = () => {
     },
     {
       icon: <Icon icon="solar:bag-check-linear" width={20} />,
-      value: loading ? '...' : `R$ ${(metrics.totalSalesMonth / 10).toFixed(1)}d`,
+      value: loading ? '...' : metrics.totalSalesMonth.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
       label: 'Vendas (Mês)',
       badge: null,
       badgeColor: 'emerald',
