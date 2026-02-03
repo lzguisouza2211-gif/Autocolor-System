@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import BarcodeScanner from './BarcodeScanner';
 import { supabase } from '../supabase';
 
 interface ProductFormProps {
@@ -8,7 +7,6 @@ interface ProductFormProps {
 }
 
 const ProductForm: React.FC<ProductFormProps> = ({ product, onSave }) => {
-  const [scannerOpen, setScannerOpen] = useState(false);
   const [form, setForm] = useState({
     name: product?.name || '',
     category: product?.category || '',
@@ -147,18 +145,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave }) => {
             }} 
             className="w-full border rounded px-3 py-2 text-sm" 
           />
-          <button type="button" onClick={() => setScannerOpen(true)} className="bg-blue-600 text-white px-3 py-2 rounded text-xs sm:text-sm whitespace-nowrap">Ler código</button>
         </div>
-        {scannerOpen && (
-          <BarcodeScanner
-            onDetected={code => {
-              setForm(f => ({ ...f, barcode: code }));
-              checkBarcodeExists(code);
-              setScannerOpen(false);
-            }}
-            onClose={() => setScannerOpen(false)}
-          />
-        )}
       </div>
       {isRestocking && existingProduct && (
         <div className="bg-blue-50 border border-blue-200 rounded p-3 sm:p-4">
