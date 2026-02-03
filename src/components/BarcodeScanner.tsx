@@ -18,7 +18,8 @@ const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onDetected, onClose }) 
       try {
         // Parar qualquer leitor anterior
         if (codeReader.current) {
-          await codeReader.current.reset();
+          // Não existe reset(), apenas liberar referência
+          codeReader.current = null;
         }
 
         codeReader.current = new BrowserMultiFormatReader();
@@ -65,8 +66,13 @@ const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onDetected, onClose }) 
       const stopScanner = async () => {
         try {
           if (codeReader.current) {
-            await codeReader.current.reset();
+            // Parar o vídeo e liberar referência
             codeReader.current = null;
+          }
+          if (videoRef.current && videoRef.current.srcObject) {
+            const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
+            tracks.forEach(track => track.stop());
+            videoRef.current.srcObject = null;
           }
         } catch (e) {
           console.error('Erro ao parar scanner:', e);
