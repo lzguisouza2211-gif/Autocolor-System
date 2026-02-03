@@ -12,6 +12,26 @@ const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onDetected, onClose }) 
   const videoRef = useRef<HTMLDivElement>(null);
   const detectionCountRef = useRef<{ [key: string]: number }>({});
 
+  // Valida o dígito verificador de códigos EAN-13 e UPC
+  const isValidBarcode = (code: string): boolean => {
+    if (!code || (code.length !== 13 && code.length !== 12 && code.length !== 8)) {
+      return false;
+    }
+
+    const digits = code.split('').map(Number);
+    if (digits.some(isNaN)) return false;
+
+    const checkDigit = digits.pop()!;
+    let sum = 0;
+
+    digits.forEach((digit, index) => {
+      sum += digit * (index % 2 === 0 ? 1 : 3);
+    });
+
+    const calculatedCheck = (10 - (sum % 10)) % 10;
+    return calculatedCheck === checkDigit;
+  };
+
   useEffect(() => {
     Quagga.init({
       inputStream: {
@@ -48,8 +68,9 @@ const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onDetected, onClose }) 
         const code = data.codeResult.code;
         const quality = data.codeResult.quality || 0;
         
-        // Só aceita leituras com qualidade mínima de 75%
+        // Validações de qualidade
         if (quality < 75) return;
+        if (!isValidBarcode(code)) return; // Valida dígito verificador
         
         // Conta quantas vezes o mesmo código foi detectado
         detectionCountRef.current[code] = (detectionCountRef.current[code] || 0) + 1;
