@@ -24,7 +24,7 @@ const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onDetected, onClose }) 
         readers: ['ean_reader', 'ean_8_reader', 'code_128_reader', 'upc_reader', 'upc_e_reader'],
       },
       locate: true,
-    }, (err) => {
+    }, (err: Error | null) => {
       if (err) {
         alert('Erro ao acessar câmera: ' + err);
         onClose();
@@ -33,7 +33,7 @@ const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onDetected, onClose }) 
       Quagga.start();
     });
 
-    Quagga.onDetected((data) => {
+    Quagga.onDetected((data: any) => {
       if (data && data.codeResult && data.codeResult.code) {
         onDetected(data.codeResult.code);
         Quagga.stop();
