@@ -10,6 +10,7 @@ interface BarcodeScannerProps {
 
 const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onDetected, onClose }) => {
   const videoRef = useRef<HTMLDivElement>(null);
+  const detectionCountRef = useRef<{ [key: string]: number }>({});
 
   useEffect(() => {
     Quagga.init({
@@ -18,12 +19,21 @@ const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onDetected, onClose }) 
         target: videoRef.current,
         constraints: {
           facingMode: 'environment',
+          width: { min: 640, ideal: 1280 },
+          height: { min: 480, ideal: 720 },
         },
       },
       decoder: {
         readers: ['ean_reader', 'ean_8_reader', 'code_128_reader', 'upc_reader', 'upc_e_reader'],
+        multiple: false,
       },
       locate: true,
+      locator: {
+        patchSize: 'medium',
+        halfSample: true,
+      },
+      numOfWorkers: 4,
+      frequency: 10,
     }, (err: Error | null) => {
       if (err) {
         alert('Erro ao acessar câmera: ' + err);
@@ -35,9 +45,21 @@ const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onDetected, onClose }) 
 
     Quagga.onDetected((data: any) => {
       if (data && data.codeResult && data.codeResult.code) {
-        onDetected(data.codeResult.code);
-        Quagga.stop();
-        Quagga.offDetected();
+        const code = data.codeResult.code;
+        const quality = data.codeResult.quality || 0;
+        
+        // Só aceita leituras com qualidade mínima de 75%
+        if (quality < 75) return;
+        
+        // Conta quantas vezes o mesmo código foi detectado
+        detectionCountRef.current[code] = (detectionCountRef.current[code] || 0) + 1;
+        
+        // Só aceita o código após 3 detecções consecutivas
+        if (detectionCountRef.current[code] >= 3) {
+          onDetected(code);
+          Quagga.stop();
+          Quagga.offDetected();
+        }
       }
     });
 
