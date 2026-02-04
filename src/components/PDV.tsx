@@ -14,6 +14,7 @@ interface Product {
   mark?: string;
   type?: string;
   color?: string;
+  is_customizable?: boolean;
 }
 
 interface CartItem {
@@ -29,6 +30,7 @@ interface CartItem {
   mark?: string;
   type?: string;
   color?: string;
+  is_customizable?: boolean;
 }
 
 const PDV: React.FC = () => {
@@ -41,12 +43,14 @@ const PDV: React.FC = () => {
   const [finalizing, setFinalizing] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [saleId, setSaleId] = useState<number | null>(null);
+  const [cartLoaded, setCartLoaded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const total = React.useMemo(() => cart.reduce((sum, item) => sum + item.subtotal, 0), [cart]);
   const desconto = React.useMemo(() => cart.reduce((sum, item) => sum + (item.discount * item.quantity), 0), [cart]);
   const subtotal = total + desconto;
-  // Número do pedido fictício (poderia ser gerado do backend futuramente)
-  const pedidoNumero = cart.length > 0 ? `#${4000 + 22}` : 'Novo Pedido';
+  // Número do pedido dinâmico do banco de dados
+  const pedidoNumero = saleId ? `#${saleId}` : 'Novo Pedido';
 
   // Formatar valor com 2 dígitos mínimo antes da vírgula e 2 depois
   const formatCurrency = (value: number): string => {
@@ -56,8 +60,20 @@ const PDV: React.FC = () => {
     return `${paddedInt}.${decPart}`;
   };
 
-  // Carregar todos os produtos ao abrir o PDV
+  // Carregar todos os produtos e carrinho salvo ao abrir o PDV
   useEffect(() => {
+    // Carregar carrinho do localStorage
+    const savedCart = localStorage.getItem('pdv_cart');
+    if (savedCart) {
+      try {
+        setCart(JSON.parse(savedCart));
+      } catch (e) {
+        console.error('Erro ao carregar carrinho:', e);
+      }
+    }
+    setCartLoaded(true);
+
+    // Carregar produtos
     supabase
       .from('products')
       .select('*')
@@ -67,6 +83,13 @@ const PDV: React.FC = () => {
         setLoading(false);
       });
   }, []);
+
+  // Salvar carrinho no localStorage sempre que mudar
+  useEffect(() => {
+    if (cartLoaded) {
+      localStorage.setItem('pdv_cart', JSON.stringify(cart));
+    }
+  }, [cart, cartLoaded]);
 
   // Filtrar produtos localmente (mesma lógica da rota /produtos)
   const filteredProducts = products.filter(p => {
@@ -110,14 +133,17 @@ const PDV: React.FC = () => {
           {
             product_id: product.id,
             name: product.name,
-            price_sale: product.price_sale ?? product.price,            original_price: product.price_sale ?? product.price,
-            discount: 0,            quantity: 1,
+            price_sale: product.price_sale ?? product.price,
+            original_price: product.price_sale ?? product.price,
+            discount: 0,
+            quantity: 1,
             subtotal: product.price_sale ?? product.price,
             stock: product.stock,
             category: product.category,
             mark: product.mark,
             type: product.type,
             color: product.color,
+            is_customizable: product.is_customizable,
           },
         ];
       }
@@ -183,6 +209,15 @@ const PDV: React.FC = () => {
     );
   };
 
+  // Atualizar nome do item (para produtos customizáveis)
+  const updateItemName = (product_id: number, newName: string) => {
+    setCart((prev) =>
+      prev.map((item) =>
+        item.product_id === product_id ? { ...item, name: newName } : item
+      )
+    );
+  };
+
   // Remover item
   const removeItem = (product_id: number) => {
     setCart((prev) => prev.filter((item) => item.product_id !== product_id));
@@ -191,6 +226,7 @@ const PDV: React.FC = () => {
   // Limpar carrinho
   const clearCart = () => {
     setCart([]);
+    localStorage.removeItem('pdv_cart');
     setError(null);
     setSuccess(null);
   };
@@ -260,9 +296,15 @@ const PDV: React.FC = () => {
       
       console.log('Itens inseridos com sucesso:', insertedItems);
       
-      setSuccess('Venda registrada com sucesso!');
+      // Usar o ID real da venda (gerado pelo banco)
+      setSaleId(sale.id);
+      setSuccess(`Pedido #${sale.id} registrado com sucesso!`);
       setCart([]);
-      setTimeout(() => setSuccess(null), 3000);
+      localStorage.removeItem('pdv_cart');
+      setTimeout(() => {
+        setSuccess(null);
+        setSaleId(null);
+      }, 3000);
     } catch (err) {
       console.error('Erro inesperado ao finalizar venda:', err);
       setError('Erro inesperado ao finalizar venda');
@@ -364,20 +406,29 @@ const PDV: React.FC = () => {
               />
             </div>
             {search.length > 0 && filteredProducts.length > 0 && (
-              <ul className="bg-white border rounded-lg shadow max-h-[200px] overflow-y-auto mt-2 z-10 relative divide-y">
+              <div className="grid grid-cols-1 gap-2 mt-2 z-10 relative">
                 {filteredProducts.map((prod) => (
-                  <li
+                  <div
                     key={prod.id}
-                    className="p-2 hover:bg-blue-50 cursor-pointer flex items-center gap-3 text-sm"
+                    className="p-3 bg-white border border-gray-200 rounded-lg hover:bg-blue-50 cursor-pointer active:bg-blue-100 transition"
                     onClick={() => addToCart(prod)}
                   >
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-slate-900 truncate">{prod.name}</div>
-                      <div className="text-xs text-gray-500">R$ {(prod.price_sale ?? prod.price).toFixed(2)}</div>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-slate-900 text-sm">{prod.name}</div>
+                        <div className="text-xs text-gray-500 flex flex-wrap gap-1 mt-1">
+                          {prod.category && <span className="px-1.5 py-0.5 bg-gray-100 rounded">#{prod.category}</span>}
+                          {prod.mark && <span className="px-1.5 py-0.5 bg-gray-100 rounded">#{prod.mark}</span>}
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end flex-shrink-0">
+                        <div className="font-bold text-slate-900 text-sm">R$ {(prod.price_sale ?? prod.price).toFixed(2)}</div>
+                        <div className="text-xs text-gray-500 mt-1">Est: {prod.stock}</div>
+                      </div>
                     </div>
-                  </li>
+                  </div>
                 ))}
-              </ul>
+              </div>
             )}
           </div>
           <div className="flex-1 overflow-y-auto min-h-0">
@@ -410,13 +461,26 @@ const PDV: React.FC = () => {
                         </button>
                       </div>
                       <div className="min-w-0">
-                        <div className="font-semibold text-base md:text-lg break-words">{item.name}</div>
-                        <div className="text-xs text-gray-500 flex flex-wrap gap-2 break-words">
-                          {item.category && <span>{item.category}</span>}
-                          {item.mark && <span>{item.mark}</span>}
-                          {item.type && <span>{item.type}</span>}
-                          {item.color && <span>{item.color}</span>}
-                        </div>
+                        {item.is_customizable ? (
+                          <input
+                            type="text"
+                            value={item.name}
+                            onChange={(e) => updateItemName(item.product_id, e.target.value)}
+                            disabled={finalizing}
+                            className="w-full text-base font-semibold text-slate-900 border border-blue-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            placeholder="Nome do produto"
+                          />
+                        ) : (
+                          <>
+                            <div className="font-semibold text-base md:text-lg break-words">{item.name}</div>
+                            <div className="text-xs text-gray-500 flex flex-wrap gap-2 break-words">
+                              {item.category && <span>{item.category}</span>}
+                              {item.mark && <span>{item.mark}</span>}
+                              {item.type && <span>{item.type}</span>}
+                              {item.color && <span>{item.color}</span>}
+                            </div>
+                          </>
+                        )}
                       </div>
                       <div className="flex justify-center">
                         <div className="flex items-center gap-1 bg-gray-50 rounded-md px-1 py-0.5 border border-gray-200">
@@ -436,10 +500,16 @@ const PDV: React.FC = () => {
                       <div className="text-right flex items-center justify-end">
                         <input
                           type="number"
-                          min={0}
+                          min="0"
                           step="0.01"
-                          value={Number(item.price_sale.toFixed(2))}
-                          onChange={(e) => updateUnitPrice(item.product_id, Number(e.target.value))}
+                          value={item.price_sale || ''}
+                          onChange={(e) => {
+                            if (e.target.value === '') {
+                              updateUnitPrice(item.product_id, 0);
+                            } else {
+                              updateUnitPrice(item.product_id, Number(e.target.value));
+                            }
+                          }}
                           disabled={finalizing}
                           className="w-full text-right text-sm font-medium text-slate-900 border border-gray-200 rounded px-0.2 py-0.2 focus:outline-none focus:ring-1 focus:ring-blue-200"
                         />
@@ -463,13 +533,26 @@ const PDV: React.FC = () => {
                     <div className="lg:hidden space-y-3">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-base break-words">{item.name}</div>
-                          <div className="text-xs text-gray-500 flex flex-wrap gap-1">
-                            {item.category && <span>{item.category}</span>}
-                            {item.mark && <span>• {item.mark}</span>}
-                            {item.type && <span>• {item.type}</span>}
-                            {item.color && <span>• {item.color}</span>}
-                          </div>
+                          {item.is_customizable ? (
+                            <input
+                              type="text"
+                              value={item.name}
+                              onChange={(e) => updateItemName(item.product_id, e.target.value)}
+                              disabled={finalizing}
+                              className="w-full text-base font-semibold text-slate-900 border border-blue-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                              placeholder="Nome do produto"
+                            />
+                          ) : (
+                            <>
+                              <div className="font-semibold text-base break-words">{item.name}</div>
+                              <div className="text-xs text-gray-500 flex flex-wrap gap-1">
+                                {item.category && <span>{item.category}</span>}
+                                {item.mark && <span>• {item.mark}</span>}
+                                {item.type && <span>• {item.type}</span>}
+                                {item.color && <span>• {item.color}</span>}
+                              </div>
+                            </>
+                          )}
                         </div>
                         <button
                           className="p-2 rounded-full hover:bg-red-100 text-red-500 flex-shrink-0"
@@ -501,10 +584,16 @@ const PDV: React.FC = () => {
                           <div className="text-xs text-gray-500 mb-1">Unitário</div>
                           <input
                             type="number"
-                            min={0}
+                            min="0"
                             step="0.01"
-                            value={Number(item.price_sale.toFixed(2))}
-                            onChange={(e) => updateUnitPrice(item.product_id, Number(e.target.value))}
+                            value={item.price_sale || ''}
+                            onChange={(e) => {
+                              if (e.target.value === '') {
+                                updateUnitPrice(item.product_id, 0);
+                              } else {
+                                updateUnitPrice(item.product_id, Number(e.target.value));
+                              }
+                            }}
                             disabled={finalizing}
                             className="w-full text-left text-sm font-medium text-slate-900 border border-gray-200 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-200"
                           />

@@ -35,6 +35,18 @@ const SalesHistory: React.FC = () => {
     fetchAllSales();
   }, [user]);
 
+  // Controlar overflow do body quando modal está aberto
+  useEffect(() => {
+    if (showModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'auto';
+    }
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
+  }, [showModal]);
+
   const checkAdminStatus = async () => {
     if (!user?.email) return;
     
@@ -164,7 +176,7 @@ const SalesHistory: React.FC = () => {
 
       {/* Modal de Detalhes */}
       {showModal && selectedSale && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-[9999] p-4">
           <div className="bg-white rounded-xl shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-slate-900">Detalhes da Venda #{selectedSale.id}</h2>
