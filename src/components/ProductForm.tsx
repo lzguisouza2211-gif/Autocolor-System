@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import BarcodeScanner from './BarcodeScanner';
 import { supabase } from '../supabase';
 
 interface ProductFormProps {
@@ -7,6 +8,8 @@ interface ProductFormProps {
 }
 
 const ProductForm: React.FC<ProductFormProps> = ({ product, onSave }) => {
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const barcodeInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     name: product?.name || '',
     category: product?.category || '',
@@ -137,6 +140,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave }) => {
         <label className="block text-xs sm:text-sm font-medium mb-1">Código de Barras</label>
         <div className="flex gap-2">
           <input 
+            ref={barcodeInputRef}
             name="barcode" 
             value={form.barcode} 
             onChange={e => {
@@ -146,6 +150,18 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave }) => {
             className="w-full border rounded px-3 py-2 text-sm" 
           />
         </div>
+        {scannerOpen && (
+          <BarcodeScanner
+            onDetected={code => {
+              setForm(f => ({ ...f, barcode: code }));
+              checkBarcodeExists(code);
+              setScannerOpen(false);
+              // Fazer blur no input de barcode para evitar que scanner continue "digitando" em outro campo
+              setTimeout(() => barcodeInputRef.current?.blur(), 100);
+            }}
+            onClose={() => setScannerOpen(false)}
+          />
+        )}
       </div>
       {isRestocking && existingProduct && (
         <div className="bg-blue-50 border border-blue-200 rounded p-3 sm:p-4">

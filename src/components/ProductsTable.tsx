@@ -44,6 +44,18 @@ const ProductsTable: React.FC = () => {
     fetchProducts();
   }, []);
 
+  // Controlar overflow do body quando modal está aberto
+  useEffect(() => {
+    if (showForm) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'auto';
+    }
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
+  }, [showForm]);
+
   const handleNew = () => {
     setEditProduct(null);
     setShowForm(true);
@@ -109,7 +121,7 @@ const ProductsTable: React.FC = () => {
         </button>
       </div>
       {showForm && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-[60] p-4">
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-[9999] p-4">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto relative">
             <ProductForm product={editProduct} onSave={handleSave} />
             <button className="absolute top-2 right-2 text-slate-400 hover:text-slate-600 z-10" onClick={() => setShowForm(false)}>
@@ -118,7 +130,8 @@ const ProductsTable: React.FC = () => {
           </div>
         </div>
       )}
-      <div className="overflow-x-auto">
+      {/* Desktop: Tabela */}
+      <div className="hidden lg:block overflow-x-auto">
         {loading ? (
           <div className="p-8 text-center text-slate-400">Carregando produtos...</div>
         ) : (
@@ -181,6 +194,88 @@ const ProductsTable: React.FC = () => {
               })}
             </tbody>
           </table>
+        )}
+      </div>
+
+      {/* Mobile: Cards */}
+      <div className="lg:hidden">
+        {loading ? (
+          <div className="p-8 text-center text-slate-400">Carregando produtos...</div>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 p-3">
+            {filteredProducts.map((product) => {
+              // Barra de estoque
+              const estoquePercent = Math.min(100, Math.round((product.stock / 10) * 100));
+              let estoqueColor = 'bg-emerald-500';
+              if (product.stock <= 5) estoqueColor = 'bg-red-500';
+              else if (product.stock <= 10) estoqueColor = 'bg-yellow-400';
+
+              return (
+                <div key={product.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                  {/* Header: Nome e Ações */}
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <div className="w-10 h-10 rounded bg-gray-100 border border-gray-200 flex items-center justify-center text-slate-400 flex-shrink-0">
+                        <Icon icon="solar:box-linear" width={20} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-slate-900 text-sm">{product.name}</div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 flex-shrink-0">
+                      <button className="text-slate-400 hover:text-indigo-600 transition-colors p-1" onClick={() => handleEdit(product)}>
+                        <Icon icon="solar:pen-linear" width={20} />
+                      </button>
+                      <button className="text-slate-400 hover:text-red-600 transition-colors p-1" onClick={() => handleDelete(product.id)}>
+                        <Icon icon="solar:trash-bin-minimalistic-linear" width={20} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Tags: Categoria e Marca */}
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    <span className="px-2 py-1 rounded-md text-xs font-medium bg-purple-50 text-purple-700 border border-purple-100">
+                      {product.category}
+                    </span>
+                    {product.mark && (
+                      <span className="px-2 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                        {product.mark}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Grid de Informações */}
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1">Preço Custo</div>
+                      <div className="text-sm font-medium text-slate-900">
+                        R$ {typeof product.price === 'number' ? product.price.toFixed(2) : (Number(product.price) ? Number(product.price).toFixed(2) : '0.00')}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1">Preço Venda</div>
+                      <div className="text-sm font-bold text-slate-900">
+                        R$ {typeof product.price_sale === 'number' ? product.price_sale.toFixed(2) : (typeof product.venda === 'number' ? product.venda.toFixed(2) : (Number(product.price_sale) ? Number(product.price_sale).toFixed(2) : '0.00'))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Estoque com Barra */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-gray-500">Estoque</span>
+                      <span className={`text-sm font-bold ${product.stock <= 5 ? 'text-red-600' : product.stock <= 10 ? 'text-yellow-600' : 'text-slate-900'}`}>
+                        {typeof product.stock === 'number' ? product.stock : (Number(product.stock) || 0)} un
+                      </span>
+                    </div>
+                    <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div className={`h-full ${estoqueColor} transition-all`} style={{ width: `${estoquePercent}%` }}></div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
     </div>
