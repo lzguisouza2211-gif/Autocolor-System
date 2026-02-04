@@ -301,6 +301,25 @@ const PDV: React.FC = () => {
       setSuccess(`Pedido #${sale.id} registrado com sucesso!`);
       setCart([]);
       localStorage.removeItem('pdv_cart');
+        // Chamar endpoint de impressão
+        try {
+          await fetch('http://localhost:4000/api/print', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              items: cart.map(item => ({
+                name: item.name,
+                qty: item.quantity,
+                price: item.price_sale
+              })),
+              total,
+              payment: 'N/A', // Adapte conforme necessário
+              company: { name: 'AutoColor' }
+            })
+          });
+        } catch (err) {
+          console.error('Erro ao imprimir recibo:', err);
+        }
       setTimeout(() => {
         setSuccess(null);
         setSaleId(null);

@@ -12,17 +12,22 @@
   "dependencies": {
     "@iconify/react": "^6.0.2",
     "@supabase/supabase-js": "^2.93.3",
+    "@types/express": "^5.0.6",
     "@zxing/browser": "^0.1.5",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "printer": "^0.4.0",
     "quagga": "^0.12.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-icons": "^5.5.0",
     "react-router-dom": "^7.13.0",
+    "react-thermal-printer": "^0.22.0",
     "vysor": "^1.1.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
-    "@types/node": "^24.10.1",
+    "@types/node": "^24.10.10",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
@@ -33,6 +38,7 @@
     "globals": "^16.5.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.3.5",
+    "ts-node": "^10.9.2",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4"
