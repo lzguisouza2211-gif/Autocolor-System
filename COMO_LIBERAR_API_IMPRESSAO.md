@@ -2,45 +2,29 @@
 
 ## Pré-requisitos
 - Node.js instalado (versão 18 ou superior recomendada)
-- Impressora térmica Bematech MP-4200 HS conectada via USB e driver instalado
+- Impressora térmica Bematech MP-4200 HS conectada via USB
+- **NÃO é necessário instalar driver** - a comunicação é direta via USB
 - O arquivo `print-server.cjs` no projeto
 
-## Passos para liberar a API (Linux)
+## 🖨️ NOVO: Sistema com ESC/POS USB Direto
 
-1. **Instale as dependências**
-   Abra o terminal na pasta do projeto e execute:
-   ```bash
-   npm install --legacy-peer-deps
-   ```
+O sistema foi atualizado para usar comunicação direta USB com a impressora, eliminando problemas de compilação de bibliotecas nativas.
 
-2. **Configure o nome da impressora**
-   No arquivo `print-server.cjs`, verifique se o nome da impressora está correto:
-   ```js
-   printer.printDirect({
-     data: Buffer.from(data),
-     printer: 'Bematech MP-4200 HS', // nome exato da impressora instalada
-     type: 'RAW',
-     ...
-   });
-   ```
-
-3. **Inicie a API**
-   Execute o comando abaixo para rodar o servidor:
-   ```bash
-   node print-server.cjs
-   ```
-   O servidor vai rodar na porta 4000. Deixe esse terminal aberto enquanto o sistema estiver em uso.
-
-4. **Permitir acesso no firewall**
-   Certifique-se de que a porta 4000 está liberada no firewall do Linux.
+**Vantagens:**
+- ✅ Detecção automática da impressora USB
+- ✅ Não precisa compilar bibliotecas complexas
+- ✅ Funciona com qualquer impressora térmica ESC/POS
+- ✅ Mais rápido e confiável
 
 ## Passos para liberar a API (Windows)
 
 1. **Instale o Node.js**
    Baixe e instale o Node.js pelo site oficial: https://nodejs.org
 
-2. **Instale o driver da impressora**
-   Instale o driver da Bematech MP-4200 HS no Windows conectando via USB. Certifique-se de que a impressora está funcionando antes de prosseguir.
+2. **Conecte a impressora USB**
+   - Conecte a impressora térmica via USB
+   - **NÃO precisa instalar driver** - o sistema acessa diretamente
+   - Aguarde o Windows reconhecer o dispositivo USB
 
 3. **Abra o Prompt de Comando**
    Navegue até a pasta do projeto usando o comando:
@@ -64,9 +48,34 @@
    ```cmd
    node print-server.cjs
    ```
-   O servidor vai rodar na porta 4000. Deixe essa janela aberta enquanto o sistema estiver em uso.
+4. **Instale as dependências do projeto**
+   Execute o comando:
+   ```cmd
+   npm install
+   ```
+   
+   O sistema irá instalar automaticamente as bibliotecas `escpos` e `escpos-usb`.
 
-7. **Permitir acesso no firewall**
+5. **Teste a detecção da impressora**
+   Inicie o servidor:
+   ```cmd
+   node print-server.cjs
+   ```
+   
+   Você deve ver uma mensagem similar a:
+   ```
+   ============================================
+   🖨️  Servidor de Impressão AutoColor
+   ============================================
+   📡 Porta: 4000
+   📍 Plataforma: win32
+   🔧 Modo: PRODUÇÃO (Windows - USB)
+   🖨️  Impressoras USB encontradas: 1
+   ✅ Sistema pronto para imprimir!
+   ============================================
+   ```
+
+6. **Permitir acesso no firewall**
    Libere a porta 4000 no firewall do Windows (Painel de Controle > Sistema e Segurança > Firewall > Regras de Entrada).
 
 ## Configuração do sistema
@@ -74,14 +83,37 @@ O sistema React deve estar configurado para enviar os pedidos para o endereço d
 
 ## Observações
 - O servidor de impressão deve rodar sempre no computador onde a impressora USB está conectada.
-- Agora o arquivo usado é o `print-server.cjs` (JavaScript puro), que imprime diretamente via USB usando o driver instalado no Windows.
-- A impressora deve estar instalada e funcionando no Windows antes de rodar a API.
-- O nome da impressora no código (`'Bematech MP-4200 HS'`) deve ser exatamente igual ao nome que aparece nas configurações de impressoras do Windows.
+- **NOVO:** Sistema usa comunicação USB direta (ESC/POS) - não precisa de driver
+- A impressora é detectada automaticamente via USB
+- Funciona com qualquer impressora térmica que suporte ESC/POS
+- **Não é mais necessário** configurar o nome da impressora no código
 
-## Como verificar o nome correto da impressora no Windows
-1. Abra "Configurações" > "Dispositivos" > "Impressoras e scanners"
-2. Veja o nome exato da impressora (exemplo: "Bematech MP-4200 HS")
-3. Use esse nome exatamente no arquivo `print-server.cjs`
+## Solução de Problemas
+
+### "Nenhuma impressora USB encontrada"
+- Verifique se a impressora está ligada e conectada via USB
+- Reconecte o cabo USB
+- Verifique no Gerenciador de Dispositivos se o USB está sendo reconhecido
+
+### "Biblioteca ESC/POS não disponível"
+- Execute: `npm install escpos escpos-usb`
+- Reinicie o servidor com `node print-server.cjs`
+
+## Passos para liberar a API (Linux - Modo Teste)
+
+No Linux, o sistema roda em modo teste e salva os recibos em arquivo:
+
+1. **Instale as dependências**
+   ```bash
+   npm install
+   ```
+
+2. **Inicie o servidor**
+   ```bash
+   node print-server.cjs
+   ```
+   
+   Os recibos serão salvos em `recibo-teste.txt` para teste.
 
 ## Suporte
 Em caso de dúvidas, entre em contato com o suporte técnico.

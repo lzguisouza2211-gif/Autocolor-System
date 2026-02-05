@@ -21,11 +21,9 @@
     "react-dom": "^19.2.0",
     "react-icons": "^5.5.0",
     "react-router-dom": "^7.13.0",
-    "react-thermal-printer": "^0.22.0",
-    "vysor": "^1.1.5"
-  },
-  "optionalDependencies": {
-    "printer": "^0.4.0"
+    "vysor": "^1.1.5",
+    "escpos": "^3.0.0-alpha.6",
+    "escpos-usb": "^3.0.0-alpha.4"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
