@@ -38,10 +38,8 @@ const Login: React.FC = () => {
       <div className="w-full max-w-md">
         <div className="bg-white rounded-lg shadow-lg p-8">
           {/* Logo */}
-          <div className="flex items-center justify-center mb-8">
-            <div className="w-12 h-12 bg-slate-900 rounded-lg flex items-center justify-center text-white text-xl font-medium mr-3">
-              A
-            </div>
+          <div className="flex items-center justify-center mb-8 gap-2">
+            <img src="/icon-autocolor.png" alt="AutoColor Logo" className="w-10 h-10 rounded-lg" />
             <span className="text-2xl font-medium tracking-tight text-slate-900">AutoColor</span>
           </div>
 

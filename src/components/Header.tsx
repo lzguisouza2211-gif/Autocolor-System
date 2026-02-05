@@ -26,9 +26,7 @@ const Header: React.FC = () => {
     <header className="h-16 bg-white/80 backdrop-blur flex items-center justify-between px-4 lg:px-8 shrink-0 z-10">
       <div className="flex items-center gap-3 flex-1 lg:flex-none">
         <div className="flex items-center gap-2 lg:ml-0">
-          <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center text-white text-sm font-medium">
-            A
-          </div>
+          <img src="/icon-autocolor.png" alt="AutoColor Logo" className="w-8 h-8 rounded-lg" />
           <span className="text-base font-medium tracking-tight text-slate-900 hidden sm:inline">AutoColor System</span>
         </div>
       </div>
