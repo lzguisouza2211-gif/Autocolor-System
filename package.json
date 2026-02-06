@@ -15,8 +15,6 @@
     "@types/express": "^5.0.6",
     "@zxing/browser": "^0.1.5",
     "cors": "^2.8.6",
-    "escpos": "^2.15.0",
-    "escpos-usb": "^1.2.0",
     "express": "^5.2.1",
     "quagga": "^0.12.1",
     "react": "^19.2.0",
@@ -42,5 +40,9 @@
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4"
+  },
+  "optionalDependencies": {
+    "escpos": "^2.5.0",
+    "escpos-usb": "^1.2.0"
   }
 }
