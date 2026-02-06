@@ -2,7 +2,6 @@ const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
 const escpos = require('escpos');
-const SerialPort = require('escpos-serialport');
 
 // Detecta se está no Linux ou Windows
 const isWindows = process.platform === 'win32';
@@ -24,7 +23,7 @@ async function printReceipt(items, total, payment, company) {
   // Para Windows, usa SerialPort na porta COM5
   if (isWindows) {
     try {
-      const device = new SerialPort('COM5', { baudRate: 9600 });
+      const device = new escpos.SerialPort('COM5', { baudRate: 9600 });
       const printer = new escpos.Printer(device);
       const now = new Date();
       const dataHora = `${now.toLocaleDateString('pt-BR')} ${now.toLocaleTimeString('pt-BR')}`;
