@@ -159,8 +159,13 @@ app.listen(PORT, () => {
   console.log('============================================');
   console.log(`📡 Porta: ${PORT}`);
   console.log(`📍 Plataforma: ${process.platform}`);
-  console.log(`🖨️  Impressora: ${isWindows ? 'Bematech MP-4200 TH (COM5)' : 'Modo teste (arquivo)'}`);
-  console.log(`🔧 Modo: ${isWindows ? 'PRODUÇÃO (Windows - escpos-serialport)' : 'TESTE (Linux - arquivo)'}`);
+  if (isWindows) {
+    console.log('🖨️  Impressora: USB (detecção automática)');
+    console.log('🔧 Modo: PRODUÇÃO (Windows - escpos-usb)');
+  } else {
+    console.log('🖨️  Impressora: Modo teste (arquivo)');
+    console.log('🔧 Modo: TESTE (Linux - arquivo)');
+  }
   console.log('✅ Sistema pronto!');
   console.log('============================================');
   console.log('');
