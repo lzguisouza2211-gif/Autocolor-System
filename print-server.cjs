@@ -21,6 +21,12 @@ function createPrinter() {
   let printer;
 
   if (isWindows) {
+    let driver;
+    try {
+      driver = require('printer');
+    } catch (err) {
+      throw new Error('Driver "printer" não encontrado. Instale o módulo "printer" para usar interface printer: no Windows.');
+    }
     // Configuração para Windows - impressora USB
     printer = new ThermalPrinter({
       type: PrinterTypes.EPSON,  // ou STAR, TANCA dependendo da sua impressora
@@ -28,6 +34,7 @@ function createPrinter() {
       characterSet: 'BRAZIL',
       removeSpecialCharacters: false,
       lineCharacter: '-',
+      driver,
       options: {
         timeout: 5000
       }
