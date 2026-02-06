@@ -20,62 +20,62 @@ app.use(express.json());
  * Formata e imprime o recibo usando escpos
  */
 async function printReceipt(items, total, payment, company) {
-  // Para Windows, usa SerialPort na porta COM5
+  // Para Windows, usa USB
   if (isWindows) {
     try {
-      const device = new escpos.SerialPort('COM5', { baudRate: 9600 });
+      const escposUSB = require('escpos-usb');
+      const device = new escposUSB();
       const printer = new escpos.Printer(device);
       const now = new Date();
       const dataHora = `${now.toLocaleDateString('pt-BR')} ${now.toLocaleTimeString('pt-BR')}`;
 
-      device.open(function() {
-        printer
-          .align('center')
-          .println('========================================')
-          .setTextSize(1, 1)
-          .bold(true)
-          .println(company?.name || 'AutoColor')
-          .bold(false)
-          .println('========================================')
-          .println('Recibo de Venda')
-          .setTextNormal()
-          .println(dataHora)
-          .drawLine()
-          .newLine();
+      await device.open();
+      printer
+        .align('center')
+        .println('========================================')
+        .setTextSize(1, 1)
+        .bold(true)
+        .println(company?.name || 'AutoColor')
+        .bold(false)
+        .println('========================================')
+        .println('Recibo de Venda')
+        .setTextNormal()
+        .println(dataHora)
+        .drawLine()
+        .newLine();
 
-        printer.align('left');
-        if (items && items.length > 0) {
-          for (const item of items) {
-            const itemName = `${item.name} x${item.qty}`;
-            const itemPrice = `R$ ${Number(item.price).toFixed(2)}`;
-            const lineWidth = 42;
-            const spaces = lineWidth - itemName.length - itemPrice.length;
-            const line = itemName + ' '.repeat(Math.max(1, spaces)) + itemPrice;
-            printer.println(line);
-          }
+      printer.align('left');
+      if (items && items.length > 0) {
+        for (const item of items) {
+          const itemName = `${item.name} x${item.qty}`;
+          const itemPrice = `R$ ${Number(item.price).toFixed(2)}`;
+          const lineWidth = 42;
+          const spaces = lineWidth - itemName.length - itemPrice.length;
+          const line = itemName + ' '.repeat(Math.max(1, spaces)) + itemPrice;
+          printer.println(line);
         }
+      }
 
-        printer
-          .newLine()
-          .drawLine()
-          .align('center')
-          .setTextSize(1, 1)
-          .bold(true)
-          .println(`TOTAL: R$ ${Number(total).toFixed(2)}`)
-          .bold(false)
-          .setTextNormal()
-          .println(`Pagamento: ${payment}`)
-          .drawLine()
-          .newLine()
-          .println('Obrigado pela preferencia!')
-          .newLine()
-          .newLine()
-          .newLine()
-          .cut();
+      printer
+        .newLine()
+        .drawLine()
+        .align('center')
+        .setTextSize(1, 1)
+        .bold(true)
+        .println(`TOTAL: R$ ${Number(total).toFixed(2)}`)
+        .bold(false)
+        .setTextNormal()
+        .println(`Pagamento: ${payment}`)
+        .drawLine()
+        .newLine()
+        .println('Obrigado pela preferencia!')
+        .newLine()
+        .newLine()
+        .newLine()
+        .cut();
 
-        printer.close();
-        console.log('✅ Impressão enviada com sucesso');
-      });
+      await printer.close();
+      console.log('✅ Impressão enviada com sucesso');
       return { success: true, message: 'Impresso com sucesso' };
     } catch (error) {
       console.error('❌ Erro ao imprimir:', error.message);

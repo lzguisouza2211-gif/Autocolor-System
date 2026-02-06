@@ -42,7 +42,7 @@
     "vite": "^7.2.4"
   },
   "optionalDependencies": {
-    "escpos": "^2.5.0",
-    "escpos-usb": "^1.2.0"
+    "escpos": "^2.5.2",
+    "escpos-usb": "npm:null@*"
   }
 }
