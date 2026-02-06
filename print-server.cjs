@@ -12,7 +12,7 @@ app.use(cors()); // Permite requisições do frontend
 app.use(express.json());
 
 // Nome da impressora Windows (configure conforme necessário)
-const PRINTER_NAME = process.env.PRINTER_NAME || 'Bematech MP-4200 HS';
+const PRINTER_NAME = process.env.PRINTER_NAME || 'MP-4200 TH';
 
 /**
  * Cria uma instância da impressora térmica
