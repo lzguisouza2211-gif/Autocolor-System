@@ -45,7 +45,100 @@ const PDV: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [saleId, setSaleId] = useState<number | null>(null);
   const [cartLoaded, setCartLoaded] = useState(false);
+
   const inputRef = useRef<HTMLInputElement>(null);
+  // Filtrar produtos localmente (mesma lógica da rota /produtos)
+  const filteredProducts = products.filter(p => {
+    const s = search.toLowerCase();
+    return (
+      p.name.toLowerCase().includes(s) ||
+      (p.category || '').toLowerCase().includes(s) ||
+      (p.mark || '').toLowerCase().includes(s) ||
+      (p.barcode || '').toLowerCase().includes(s)
+    );
+  });
+  // Estado para navegação por teclado no carrinho
+  const [selectedCartIndex, setSelectedCartIndex] = useState<number>(-1);
+  // Estado para navegação por teclado na lista de produtos filtrados
+  const [selectedProductIndex, setSelectedProductIndex] = useState<number>(-1);
+  // Resetar seleção de produto ao mudar busca ou lista
+  useEffect(() => {
+    setSelectedProductIndex(filteredProducts.length > 0 ? 0 : -1);
+  }, [search, filteredProducts.length]);
+
+  // Permitir mouseover para selecionar item visualmente
+  const handleProductMouseOver = (idx: number) => {
+    setSelectedProductIndex(idx);
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (finalizing || filteredProducts.length === 0) return;
+    if (e.key === 'ArrowDown') {
+      setSelectedProductIndex((prev) => {
+        const next = prev < filteredProducts.length - 1 ? prev + 1 : 0;
+        setTimeout(() => {
+          const el = document.getElementById(`product-option-${next}`);
+          el?.scrollIntoView({ block: 'nearest' });
+        }, 0);
+        return next;
+      });
+      e.preventDefault();
+    } else if (e.key === 'ArrowUp') {
+      setSelectedProductIndex((prev) => {
+        const next = prev > 0 ? prev - 1 : filteredProducts.length - 1;
+        setTimeout(() => {
+          const el = document.getElementById(`product-option-${next}`);
+          el?.scrollIntoView({ block: 'nearest' });
+        }, 0);
+        return next;
+      });
+      e.preventDefault();
+    } else if (e.key === 'Enter') {
+      if (selectedProductIndex >= 0 && selectedProductIndex < filteredProducts.length) {
+        addToCart(filteredProducts[selectedProductIndex]);
+        setTimeout(() => { inputRef.current?.focus(); }, 0);
+      }
+    }
+  };
+  
+    // Efeito para resetar seleção se carrinho mudar
+    useEffect(() => {
+      if (cart.length === 0) {
+        setSelectedCartIndex(-1);
+      } else if (selectedCartIndex >= cart.length) {
+        setSelectedCartIndex(cart.length - 1);
+      }
+    }, [cart, selectedCartIndex]);
+
+    // Handler de teclado global para navegação no carrinho
+    useEffect(() => {
+      const handleKeyDown = (e: KeyboardEvent) => {
+        // Só ativa se o carrinho tiver itens e não estiver finalizando
+        if (finalizing || cart.length === 0) return;
+        // Se foco está em input, não navega
+        const active = document.activeElement;
+        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) return;
+
+        if (e.key === 'ArrowDown') {
+          setSelectedCartIndex((prev) => (prev < cart.length - 1 ? prev + 1 : 0));
+          e.preventDefault();
+        } else if (e.key === 'ArrowUp') {
+          setSelectedCartIndex((prev) => (prev > 0 ? prev - 1 : cart.length - 1));
+          e.preventDefault();
+        } else if (e.key === 'Delete') {
+          if (selectedCartIndex >= 0 && selectedCartIndex < cart.length) {
+            removeItem(cart[selectedCartIndex].product_id);
+          }
+        } else if (e.key === 'Enter') {
+          // Enter: aumenta quantidade do item selecionado
+          if (selectedCartIndex >= 0 && selectedCartIndex < cart.length) {
+            changeQuantity(cart[selectedCartIndex].product_id, 1);
+          }
+        }
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [cart, selectedCartIndex, finalizing]);
   const total = React.useMemo(() => cart.reduce((sum, item) => sum + item.subtotal, 0), [cart]);
   const desconto = React.useMemo(() => cart.reduce((sum, item) => sum + (item.discount * item.quantity), 0), [cart]);
   const subtotal = total + desconto;
@@ -90,19 +183,6 @@ const PDV: React.FC = () => {
       localStorage.setItem('pdv_cart', JSON.stringify(cart));
     }
   }, [cart, cartLoaded]);
-
-  // Filtrar produtos localmente (mesma lógica da rota /produtos)
-  const filteredProducts = products.filter(p => {
-    const s = search.toLowerCase();
-    return (
-      p.name.toLowerCase().includes(s) ||
-      (p.category || '').toLowerCase().includes(s) ||
-      (p.mark || '').toLowerCase().includes(s) ||
-      (p.barcode || '').toLowerCase().includes(s)
-    );
-  });
-
-  // (Removido: total agora é calculado via useMemo)
 
   // Adicionar produto ao carrinho
   const addToCart = (product: Product) => {
@@ -348,6 +428,17 @@ const PDV: React.FC = () => {
               <FiTrash2 size={22} />
             </button>
           </div>
+          {cart.length > 0 && (
+            <div className="flex justify-end mb-2">
+              <button
+                className="flex items-center gap-1 px-3 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100 text-xs font-semibold border border-red-200 transition disabled:opacity-50"
+                onClick={clearCart}
+                disabled={finalizing}
+              >
+                <FiTrash2 size={14} /> Remover todos
+              </button>
+            </div>
+          )}
           <div className="relative w-full">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
               <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16Z"/></svg>
@@ -359,6 +450,7 @@ const PDV: React.FC = () => {
               placeholder="Buscar por nome, categoria, marca ou código..."
               value={search}
               onChange={e => setSearch(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
               maxLength={100}
               disabled={loading || finalizing}
             />
@@ -369,11 +461,17 @@ const PDV: React.FC = () => {
           )}
           {search.length > 0 && filteredProducts.length > 0 && (
             <ul className="bg-white border rounded-lg shadow max-h-[520px] overflow-y-auto mt-3 z-10 relative divide-y">
-              {filteredProducts.map((prod) => (
+              {filteredProducts.map((prod, idx) => (
                 <li
                   key={prod.id}
-                  className="p-3 hover:bg-blue-50 cursor-pointer flex flex-row items-center gap-4"
-                  onClick={() => addToCart(prod)}
+                  id={`product-option-${idx}`}
+                  className={`p-3 hover:bg-blue-50 cursor-pointer flex flex-row items-center gap-4 ${selectedProductIndex === idx ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
+                  onMouseOver={() => handleProductMouseOver(idx)}
+                  onClick={() => {
+                    addToCart(prod);
+                    setTimeout(() => { inputRef.current?.focus(); }, 0);
+                  }}
+                  tabIndex={-1}
                 >
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-base text-slate-900 truncate">{prod.name}</div>
@@ -409,6 +507,17 @@ const PDV: React.FC = () => {
                 <FiTrash2 size={20} />
               </button>
             </div>
+            {cart.length > 0 && (
+              <div className="flex justify-end mb-2">
+                <button
+                  className="flex items-center gap-1 px-3 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100 text-xs font-semibold border border-red-200 transition disabled:opacity-50"
+                  onClick={clearCart}
+                  disabled={finalizing}
+                >
+                  <FiTrash2 size={14} /> Remover todos
+                </button>
+              </div>
+            )}
             <div className="relative w-full">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
                 <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16Z"/></svg>
@@ -420,6 +529,7 @@ const PDV: React.FC = () => {
                 placeholder="Buscar produto..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
                 maxLength={100}
                 disabled={loading || finalizing}
               />
@@ -465,8 +575,12 @@ const PDV: React.FC = () => {
               <div className="text-gray-400 text-center py-8">Nenhum produto adicionado</div>
             ) : (
               <ul className="divide-y">
-                {cart.map((item) => (
-                  <li key={item.product_id} className="py-4">
+                {cart.map((item, idx) => (
+                  <li
+                    key={item.product_id}
+                    className={`py-4 ${selectedCartIndex === idx ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
+                    tabIndex={-1}
+                  >
                     {/* Layout Desktop */}
                     <div className="hidden lg:grid grid-cols-[28px_2.4fr_0.8fr_1fr_1.2fr] gap-3 items-center">
                       <div className="flex items-center justify-center">
@@ -549,7 +663,7 @@ const PDV: React.FC = () => {
                     </div>
                     
                     {/* Layout Mobile */}
-                    <div className="lg:hidden space-y-3">
+                    <div className={`lg:hidden space-y-3 ${selectedCartIndex === idx ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}> 
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
                           {item.is_customizable ? (
