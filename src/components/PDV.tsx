@@ -255,23 +255,21 @@ const PDV: React.FC = () => {
   };
 
   // Alterar quantidade
-  const changeQuantity = (product_id: number, delta: number) => {
+  const changeQuantity = (idx: number, delta: number) => {
     setCart((prev) =>
-      prev.map((item) => {
-        if (item.product_id === product_id) {
-          const newQty = item.quantity + delta;
-          if (newQty < 1) return item;
-          if (newQty > item.stock) {
-            setError('Estoque insuficiente');
-            return item;
-          }
-          return {
-            ...item,
-            quantity: newQty,
-            subtotal: newQty * item.price_sale,
-          };
+      prev.map((item, i) => {
+        if (i !== idx) return item;
+        const newQty = item.quantity + delta;
+        if (newQty < 1) return item;
+        if (newQty > item.stock) {
+          setError('Estoque insuficiente');
+          return item;
         }
-        return item;
+        return {
+          ...item,
+          quantity: newQty,
+          subtotal: newQty * item.price_sale,
+        };
       })
     );
     setError(null);
@@ -641,13 +639,13 @@ const PDV: React.FC = () => {
                         <div className="flex items-center gap-1 bg-gray-50 rounded-md px-1 py-0.5 border border-gray-200">
                           <button
                             className="w-6 h-6 md:w-7 md:h-7 rounded-md bg-white border text-sm font-semibold flex items-center justify-center"
-                            onClick={() => changeQuantity(item.product_id, -1)}
+                            onClick={() => changeQuantity(idx, -1)}
                             disabled={item.quantity <= 1 || finalizing}
                           >-</button>
                           <span className="w-6 md:w-7 text-center text-sm font-semibold text-slate-700">{item.quantity}</span>
                           <button
                             className="w-6 h-6 md:w-7 md:h-7 rounded-md bg-white border text-sm font-semibold flex items-center justify-center"
-                            onClick={() => changeQuantity(item.product_id, 1)}
+                            onClick={() => changeQuantity(idx, 1)}
                             disabled={item.quantity >= item.stock || finalizing}
                           >+</button>
                         </div>
@@ -724,13 +722,13 @@ const PDV: React.FC = () => {
                           <div className="flex items-center gap-1 bg-gray-50 rounded-md px-1 py-0.5 border border-gray-200 w-fit">
                             <button
                               className="w-8 h-8 rounded-md bg-white border text-sm font-semibold flex items-center justify-center"
-                              onClick={() => changeQuantity(item.product_id, -1)}
+                              onClick={() => changeQuantity(idx, -1)}
                               disabled={item.quantity <= 1 || finalizing}
                             >-</button>
                             <span className="w-8 text-center text-sm font-semibold text-slate-700">{item.quantity}</span>
                             <button
                               className="w-8 h-8 rounded-md bg-white border text-sm font-semibold flex items-center justify-center"
-                              onClick={() => changeQuantity(item.product_id, 1)}
+                              onClick={() => changeQuantity(idx, 1)}
                               disabled={item.quantity >= item.stock || finalizing}
                             >+</button>
                           </div>
