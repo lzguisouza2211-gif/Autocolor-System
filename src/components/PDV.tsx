@@ -277,11 +277,11 @@ const PDV: React.FC = () => {
     setError(null);
   };
 
-  const updateUnitPrice = (product_id: number, unitPrice: number) => {
+  const updateUnitPrice = (idx: number, unitPrice: number) => {
     if (Number.isNaN(unitPrice) || unitPrice < 0) return;
     setCart((prev) =>
-      prev.map((item) => {
-        if (item.product_id !== product_id) return item;
+      prev.map((item, i) => {
+        if (i !== idx) return item;
         const discount = item.original_price - unitPrice;
         return {
           ...item,
@@ -293,11 +293,11 @@ const PDV: React.FC = () => {
     );
   };
 
-  const updateTotalPrice = (product_id: number, totalPrice: number) => {
+  const updateTotalPrice = (idx: number, totalPrice: number) => {
     if (Number.isNaN(totalPrice) || totalPrice < 0) return;
     setCart((prev) =>
-      prev.map((item) => {
-        if (item.product_id !== product_id) return item;
+      prev.map((item, i) => {
+        if (i !== idx) return item;
         const unitPrice = item.quantity > 0 ? totalPrice / item.quantity : 0;
         const discount = item.original_price - unitPrice;
         return {
@@ -311,10 +311,11 @@ const PDV: React.FC = () => {
   };
 
   // Atualizar nome do item (para produtos customizáveis)
-  const updateItemName = (product_id: number, newName: string) => {
+  // Atualizar nome do item (para produtos customizáveis)
+  const updateItemName = (index: number, newName: string) => {
     setCart((prev) =>
-      prev.map((item) =>
-        item.product_id === product_id ? { ...item, name: newName } : item
+      prev.map((item, idx) =>
+        idx === index ? { ...item, name: newName } : item
       )
     );
   };
@@ -619,7 +620,7 @@ const PDV: React.FC = () => {
                           <input
                             type="text"
                             value={item.name}
-                            onChange={(e) => updateItemName(item.product_id, e.target.value)}
+                            onChange={(e) => updateItemName(idx, e.target.value)}
                             disabled={finalizing}
                             className="w-full text-base font-semibold text-slate-900 border border-blue-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
                             placeholder="Nome do produto"
@@ -659,9 +660,9 @@ const PDV: React.FC = () => {
                           value={item.price_sale || ''}
                           onChange={(e) => {
                             if (e.target.value === '') {
-                              updateUnitPrice(item.product_id, 0);
+                              updateUnitPrice(idx, 0);
                             } else {
-                              updateUnitPrice(item.product_id, Number(e.target.value));
+                              updateUnitPrice(idx, Number(e.target.value));
                             }
                           }}
                           disabled={finalizing}
@@ -675,7 +676,7 @@ const PDV: React.FC = () => {
                           value={formatCurrency(item.subtotal)}
                           onChange={(e) => {
                             const numValue = parseFloat(e.target.value.replace(/[^0-9.]/g, ''));
-                            if (!isNaN(numValue)) updateTotalPrice(item.product_id, numValue);
+                            if (!isNaN(numValue)) updateTotalPrice(idx, numValue);
                           }}
                           disabled={finalizing}
                           className="w-full text-right text-sm font-bold text-slate-900 border border-gray-200 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-200"
@@ -691,7 +692,7 @@ const PDV: React.FC = () => {
                             <input
                               type="text"
                               value={item.name}
-                              onChange={(e) => updateItemName(item.product_id, e.target.value)}
+                              onChange={(e) => updateItemName(idx, e.target.value)}
                               disabled={finalizing}
                               className="w-full text-base font-semibold text-slate-900 border border-blue-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
                               placeholder="Nome do produto"
