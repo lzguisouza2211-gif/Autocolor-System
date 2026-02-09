@@ -187,27 +187,12 @@ const PDV: React.FC = () => {
   // Adicionar produto ao carrinho
   const addToCart = (product: Product) => {
     setCart((prev) => {
-      const existing = prev.find((item) => item.product_id === product.id);
-      if (existing) {
-        // Se já existe, aumenta quantidade se não ultrapassar estoque
-        if (existing.quantity + 1 > product.stock) {
-          setError('Estoque insuficiente');
-          return prev;
-        }
-        return prev.map((item) =>
-          item.product_id === product.id
-            ? {
-                ...item,
-                quantity: item.quantity + 1,
-                subtotal: (item.quantity + 1) * (product.price_sale ?? product.price),
-              }
-            : item
-        );
-      } else {
-        if (product.stock < 1) {
-          setError('Produto sem estoque');
-          return prev;
-        }
+      if (product.stock < 1) {
+        setError('Produto sem estoque');
+        return prev;
+      }
+      // Só EMBALAGEM pode ser adicionado como item separado
+      if (product.name.trim().toUpperCase() === 'EMBALAGEM') {
         return [
           ...prev,
           {
@@ -226,6 +211,42 @@ const PDV: React.FC = () => {
             is_customizable: product.is_customizable,
           },
         ];
+      } else {
+        const existing = prev.find((item) => item.product_id === product.id);
+        if (existing) {
+          if (existing.quantity + 1 > product.stock) {
+            setError('Estoque insuficiente');
+            return prev;
+          }
+          return prev.map((item) =>
+            item.product_id === product.id
+              ? {
+                  ...item,
+                  quantity: item.quantity + 1,
+                  subtotal: (item.quantity + 1) * (product.price_sale ?? product.price),
+                }
+              : item
+          );
+        } else {
+          return [
+            ...prev,
+            {
+              product_id: product.id,
+              name: product.name,
+              price_sale: product.price_sale ?? product.price,
+              original_price: product.price_sale ?? product.price,
+              discount: 0,
+              quantity: 1,
+              subtotal: product.price_sale ?? product.price,
+              stock: product.stock,
+              category: product.category,
+              mark: product.mark,
+              type: product.type,
+              color: product.color,
+              is_customizable: product.is_customizable,
+            },
+          ];
+        }
       }
     });
     setError(null);
