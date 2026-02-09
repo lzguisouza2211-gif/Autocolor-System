@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import BarcodeScanner from './BarcodeScanner';
 import { FiTrash2 } from 'react-icons/fi';
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -34,6 +35,14 @@ interface CartItem {
 }
 
 const PDV: React.FC = () => {
+    // Estado para abrir scanner
+    const [scannerOpen, setScannerOpen] = useState(false);
+    // Handler para código de barras detectado
+    const handleBarcodeDetected = (barcode: string) => {
+      setSearch(barcode);
+      setScannerOpen(false);
+      setTimeout(() => inputRef.current?.focus(), 100);
+    };
   // Estados
   const { user } = useAuth();
   const [search, setSearch] = useState('');
@@ -459,7 +468,7 @@ const PDV: React.FC = () => {
               </button>
             </div>
           )}
-          <div className="relative w-full">
+          <div className="relative w-full flex items-center gap-2">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
               <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16Z"/></svg>
             </span>
@@ -474,6 +483,18 @@ const PDV: React.FC = () => {
               maxLength={100}
               disabled={loading || finalizing}
             />
+            <button
+              type="button"
+              className="ml-2 px-2 py-2 rounded bg-blue-100 hover:bg-blue-200 text-blue-700 text-sm font-semibold border border-blue-200 transition"
+              onClick={() => setScannerOpen(true)}
+              disabled={loading || finalizing}
+              title="Ler código de barras"
+            >
+              <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M4 7V4h3M20 7V4h-3M4 17v3h3M20 17v3h-3M2 12h2M20 12h2M12 2v2M12 20v2"/><rect x="7" y="7" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="2"/></svg>
+            </button>
+            {scannerOpen && (
+              <BarcodeScanner onDetected={handleBarcodeDetected} onClose={() => setScannerOpen(false)} />
+            )}
           </div>
           {loading && <div className="text-center text-gray-500 mt-2">Carregando produtos...</div>}
           {search.length > 0 && filteredProducts.length === 0 && !loading && (
