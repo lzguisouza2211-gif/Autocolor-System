@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import BarcodeScanner from './BarcodeScanner';
 import { FiTrash2 } from 'react-icons/fi';
@@ -54,6 +55,19 @@ const PDV: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [saleId, setSaleId] = useState<number | null>(null);
   const [cartLoaded, setCartLoaded] = useState(false);
+
+  // Cálculo de totais (deve vir antes de hooks que dependem deles)
+  const total = React.useMemo(() => cart.reduce((sum, item) => sum + item.subtotal, 0), [cart]);
+  const desconto = React.useMemo(() => cart.reduce((sum, item) => sum + (item.discount * item.quantity), 0), [cart]);
+  const subtotal = total + desconto;
+
+  // Troco
+  const [valorRecebido, setValorRecebido] = useState('');
+  const troco = React.useMemo(() => {
+    const recebido = parseFloat(valorRecebido.replace(',', '.'));
+    if (isNaN(recebido)) return 0;
+    return recebido - total;
+  }, [valorRecebido, total]);
 
   const inputRef = useRef<HTMLInputElement>(null);
   // Filtrar produtos localmente (mesma lógica da rota /produtos)
@@ -148,9 +162,6 @@ const PDV: React.FC = () => {
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
     }, [cart, selectedCartIndex, finalizing]);
-  const total = React.useMemo(() => cart.reduce((sum, item) => sum + item.subtotal, 0), [cart]);
-  const desconto = React.useMemo(() => cart.reduce((sum, item) => sum + (item.discount * item.quantity), 0), [cart]);
-  const subtotal = total + desconto;
   // Número do pedido dinâmico do banco de dados
   const pedidoNumero = saleId ? `#${saleId}` : 'Novo Pedido';
 
@@ -350,10 +361,14 @@ const PDV: React.FC = () => {
       setError('Usuário não autenticado');
       return;
     }
+    const recebido = parseFloat(valorRecebido.replace(',', '.'));
+    if (isNaN(recebido) || recebido < total) {
+      setError('Valor recebido insuficiente para finalizar a venda');
+      return;
+    }
     setFinalizing(true);
     setError(null);
     setSuccess(null);
-    
     try {
       // 1. Inserir sale
       const { data: sale, error: saleError } = await supabase
@@ -409,6 +424,7 @@ const PDV: React.FC = () => {
       setSaleId(sale.id);
       setSuccess(`Pedido #${sale.id} registrado com sucesso!`);
       setCart([]);
+      setValorRecebido('');
       localStorage.removeItem('pdv_cart');
         // Chamar endpoint de impressão
         try {
@@ -797,6 +813,27 @@ const PDV: React.FC = () => {
             </div>
             {error && <div className="text-red-600 text-center mt-2">{error}</div>}
             {success && <div className="text-green-600 text-center mt-2">{success}</div>}
+            {/* Campo para valor recebido e cálculo do troco */}
+            <div className="flex flex-col gap-2 mt-2">
+              <label htmlFor="valor-recebido" className="text-sm text-gray-600">Valor recebido</label>
+              <input
+                id="valor-recebido"
+                type="number"
+                min="0"
+                step="0.01"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-200"
+                placeholder="Digite o valor recebido"
+                value={valorRecebido}
+                onChange={e => setValorRecebido(e.target.value)}
+                disabled={finalizing || cart.length === 0}
+              />
+              <div className="flex justify-between items-center text-base font-semibold mt-1">
+                <span>Troco</span>
+                <span className={troco < 0 ? 'text-red-600' : 'text-green-600'}>
+                  R$ {troco.toFixed(2)}
+                </span>
+              </div>
+            </div>
             <button
               className="w-full bg-slate-900 text-white text-base font-semibold rounded-lg py-3 mt-4 shadow hover:bg-slate-800 transition"
               onClick={finalizeSale}
