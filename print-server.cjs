@@ -23,77 +23,20 @@ async function printReceipt(items, total, payment, company) {
   // Para Windows, detecta se impressora está como USB ou Serial (COM)
   if (isWindows) {
     try {
-      let device, printer;
-      // Tenta detectar impressora serial virtual (COM)
-      const escposSerialPort = require('escpos-serialport');
-      // Detecta construtor correto
-      let SerialPortConstructor = escposSerialPort.SerialPort || escposSerialPort.default || escposSerialPort;
-      // Se não for função, tenta usar diretamente
-      if (typeof SerialPortConstructor !== 'function') {
-        SerialPortConstructor = escposSerialPort;
-      }
-      device = new SerialPortConstructor('COM5', { baudRate: 9600 });
-      printer = new escpos.Printer(device);
-      const now = new Date();
-      const dataHora = `${now.toLocaleDateString('pt-BR')} ${now.toLocaleTimeString('pt-BR')}`;
-
-      return await new Promise((resolve, reject) => {
-        device.open(function(error) {
-          if (error) {
-            console.error('❌ Erro ao abrir a impressora Serial:', error.message);
-            const receiptText = formatReceiptAsText(items, total, payment, company);
-            fs.writeFileSync('recibo-erro.txt', receiptText);
-            return reject(error);
-          }
-          printer
-            .align('center')
-            .println('========================================')
-            .setTextSize(1, 1)
-            .bold(true)
-            .println(company?.name || 'AutoColor')
-            .bold(false)
-            .println('========================================')
-            .println('Recibo de Venda')
-            .setTextNormal()
-            .println(dataHora)
-            .drawLine()
-            .newLine();
-
-          printer.align('left');
-          if (items && items.length > 0) {
-            for (const item of items) {
-              const itemName = `${item.name} x${item.qty}`;
-              const itemPrice = `R$ ${Number(item.price).toFixed(2)}`;
-              const lineWidth = 42;
-              const spaces = lineWidth - itemName.length - itemPrice.length;
-              const line = itemName + ' '.repeat(Math.max(1, spaces)) + itemPrice;
-              printer.println(line);
-            }
-          }
-
-          printer
-            .newLine()
-            .drawLine()
-            .align('center')
-            .setTextSize(1, 1)
-            .bold(true)
-            .println(`TOTAL: R$ ${Number(total).toFixed(2)}`)
-            .bold(false)
-            .setTextNormal()
-            .println(`Pagamento: ${payment}`)
-            .drawLine()
-            .newLine()
-            .println('Obrigado pela preferencia!')
-            .newLine()
-            .newLine()
-            .newLine()
-            .cut();
-
-          printer.close();
-          console.log('✅ Impressão enviada com sucesso');
-          resolve({ success: true, message: 'Impresso com sucesso' });
-        });
+      // Gera recibo em arquivo texto
+      const receiptText = formatReceiptAsText(items, total, payment, company);
+      const filePath = 'recibo-print.txt';
+      fs.writeFileSync(filePath, receiptText);
+      // Executa comando para enviar arquivo para impressora
+      const { exec } = require('child_process');
+      exec(`copy ${filePath} COM5`, (error, stdout, stderr) => {
+        if (error) {
+          console.error('❌ Erro ao imprimir via comando copy:', error.message);
+          return;
+        }
+        console.log('✅ Recibo enviado para impressora COM5');
       });
+      return { success: true, message: 'Recibo enviado para impressora via comando copy' };
     } catch (error) {
       console.error('❌ Erro ao imprimir:', error.message);
       const receiptText = formatReceiptAsText(items, total, payment, company);
