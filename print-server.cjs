@@ -1,7 +1,6 @@
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
-const escpos = require('escpos');
 
 // Detecta se está no Linux ou Windows
 const isWindows = process.platform === 'win32';
