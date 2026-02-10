@@ -448,14 +448,7 @@ const PDV: React.FC = () => {
         <div className="hidden lg:flex flex-col h-full bg-white p-10">
           <div className="flex items-center justify-between mb-4">
             <div className="font-semibold text-xl md:text-2xl">Pedido {pedidoNumero}</div>
-            <button
-              className="p-2 rounded-full hover:bg-gray-100 text-gray-500"
-              onClick={clearCart}
-              title="Limpar carrinho"
-              disabled={cart.length === 0 || finalizing}
-            >
-              <FiTrash2 size={22} />
-            </button>
+            {/* Botão de lixeira superior removido conforme solicitado */}
           </div>
           {cart.length > 0 && (
             <div className="flex justify-end mb-2">
@@ -498,17 +491,29 @@ const PDV: React.FC = () => {
                 <li
                   key={prod.id}
                   id={`product-option-${idx}`}
-                  className={`p-3 hover:bg-blue-50 cursor-pointer flex flex-row items-center gap-4 ${selectedProductIndex === idx ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
+                  className={`p-3 flex flex-row items-center gap-4 transition
+                    ${prod.stock < 1 ? 'bg-red-50 cursor-not-allowed opacity-70 border border-red-200' : 'hover:bg-blue-50 cursor-pointer'}
+                    ${selectedProductIndex === idx && prod.stock > 0 ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
                   onMouseOver={() => handleProductMouseOver(idx)}
                   onClick={() => {
-                    addToCart(prod);
-                    setTimeout(() => { inputRef.current?.focus(); }, 0);
+                    if (prod.stock > 0) {
+                      addToCart(prod);
+                      setTimeout(() => { inputRef.current?.focus(); }, 0);
+                    }
                   }}
                   tabIndex={-1}
+                  aria-disabled={prod.stock < 1}
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-base text-slate-900 truncate">{prod.name}</div>
-                    <div className="text-xs text-gray-500 flex flex-wrap gap-2">
+                    <div className={`font-semibold text-base truncate ${prod.stock < 1 ? 'text-red-700' : 'text-slate-900'}`}>{prod.name}
+                      {prod.stock < 1 && (
+                        <span className="ml-2 inline-flex items-center text-xs font-semibold text-red-700">
+                          <svg className="inline mr-1" width="16" height="16" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+                          Sem estoque
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs flex flex-wrap gap-2 ${prod.stock < 1 ? 'text-red-500' : 'text-gray-500'}">
                       {prod.category && <span>{prod.category}</span>}
                       {prod.mark && <span>{prod.mark}</span>}
                       {prod.type && <span>{prod.type}</span>}
@@ -516,8 +521,8 @@ const PDV: React.FC = () => {
                     </div>
                   </div>
                   <div className="flex flex-col items-end min-w-[90px]">
-                    <span className="font-bold text-slate-900 text-lg">R$ {(prod.price_sale ?? prod.price).toFixed(2)}</span>
-                    <span className="text-xs text-gray-500">Estoque: {prod.stock}</span>
+                    <span className={`font-bold text-lg ${prod.stock < 1 ? 'text-red-700' : 'text-slate-900'}`}>R$ {(prod.price_sale ?? prod.price).toFixed(2)}</span>
+                    <span className={`text-xs ${prod.stock < 1 ? 'text-red-700' : 'text-gray-500'}`}>Estoque: {prod.stock}</span>
                   </div>
                 </li>
               ))}
