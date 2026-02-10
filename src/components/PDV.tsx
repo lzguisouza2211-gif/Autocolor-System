@@ -536,14 +536,7 @@ const PDV: React.FC = () => {
           <div className="lg:hidden mb-4 shrink-0">
             <div className="flex items-center justify-between mb-3">
               <div className="font-semibold text-lg">Pedido {pedidoNumero}</div>
-              <button
-                className="p-2 rounded-full hover:bg-gray-100 text-gray-500"
-                onClick={clearCart}
-                title="Limpar carrinho"
-                disabled={cart.length === 0 || finalizing}
-              >
-                <FiTrash2 size={20} />
-              </button>
+              {/* Ícone de lixeira do topo removido no mobile conforme solicitado */}
             </div>
             {cart.length > 0 && (
               <div className="flex justify-end mb-2">
