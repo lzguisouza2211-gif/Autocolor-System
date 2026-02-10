@@ -20,19 +20,21 @@ app.use(express.json());
  * Formata e imprime o recibo usando escpos
  */
 async function printReceipt(items, total, payment, company) {
-  // Para Windows, usa USB
+  // Para Windows, detecta se impressora está como USB ou Serial (COM)
   if (isWindows) {
     try {
-      const escposUSB = require('escpos-usb');
-      const device = new escposUSB();
-      const printer = new escpos.Printer(device);
+      let device, printer;
+      // Tenta detectar impressora serial virtual (COM)
+      const SerialPort = require('escpos-serialport');
+      device = new SerialPort('COM5', { baudRate: 9600 });
+      printer = new escpos.Printer(device);
       const now = new Date();
       const dataHora = `${now.toLocaleDateString('pt-BR')} ${now.toLocaleTimeString('pt-BR')}`;
 
       return await new Promise((resolve, reject) => {
         device.open(function(error) {
           if (error) {
-            console.error('❌ Erro ao abrir a impressora USB:', error.message);
+            console.error('❌ Erro ao abrir a impressora Serial:', error.message);
             const receiptText = formatReceiptAsText(items, total, payment, company);
             fs.writeFileSync('recibo-erro.txt', receiptText);
             return reject(error);
