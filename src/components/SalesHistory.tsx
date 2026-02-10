@@ -31,6 +31,7 @@ const SalesHistory: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
+    if (!user) return;
     checkAdminStatus();
     fetchAllSales();
   }, [user]);
@@ -113,6 +114,12 @@ const SalesHistory: React.FC = () => {
     setSelectedSale(null);
   };
 
+  const { loading: authLoading } = useAuth();
+  if (authLoading || !user) {
+    return (
+      <div className="h-32 flex items-center justify-center text-slate-500">Carregando...</div>
+    );
+  }
   if (!isAdmin) {
     return (
       <div className="space-y-6">

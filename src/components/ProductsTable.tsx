@@ -1,5 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import { Icon } from '@iconify/react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../supabase';
@@ -21,7 +22,7 @@ type Product = {
 const ProductsTable: React.FC = () => {
   const [searchParams] = useSearchParams();
   const estoqueFilter = searchParams.get('estoque');
-  
+  const { user, loading: authLoading } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -41,8 +42,15 @@ const ProductsTable: React.FC = () => {
   };
 
   useEffect(() => {
+    if (!user) return;
     fetchProducts();
-  }, []);
+  }, [user]);
+
+  if (authLoading || !user) {
+    return (
+      <div className="h-32 flex items-center justify-center text-slate-500">Carregando...</div>
+    );
+  }
 
   // Controlar overflow do body quando modal está aberto
   useEffect(() => {

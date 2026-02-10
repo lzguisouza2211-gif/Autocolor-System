@@ -483,15 +483,7 @@ const PDV: React.FC = () => {
               maxLength={100}
               disabled={loading || finalizing}
             />
-            <button
-              type="button"
-              className="ml-2 px-2 py-2 rounded bg-blue-100 hover:bg-blue-200 text-blue-700 text-sm font-semibold border border-blue-200 transition"
-              onClick={() => setScannerOpen(true)}
-              disabled={loading || finalizing}
-              title="Ler código de barras"
-            >
-              <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M4 7V4h3M20 7V4h-3M4 17v3h3M20 17v3h-3M2 12h2M20 12h2M12 2v2M12 20v2"/><rect x="7" y="7" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="2"/></svg>
-            </button>
+            {/* Botão de código de barras removido conforme solicitado */}
             {scannerOpen && (
               <BarcodeScanner onDetected={handleBarcodeDetected} onClose={() => setScannerOpen(false)} />
             )}

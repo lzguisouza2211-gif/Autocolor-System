@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import { Icon } from '@iconify/react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
@@ -16,8 +17,10 @@ const badgeColors: Record<string, string> = {
   slate: 'text-slate-600 bg-slate-100',
 };
 
+
 const DashboardMetrics: React.FC = () => {
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
   const [metrics, setMetrics] = useState<MetricData>({
     totalProducts: 0,
     totalSalesMonth: 0,
@@ -27,6 +30,7 @@ const DashboardMetrics: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!user) return;
     const fetchMetrics = async () => {
       setLoading(true);
 
@@ -55,8 +59,6 @@ const DashboardMetrics: React.FC = () => {
         .is('deleted_at', null)
         .lte('stock', 10);
 
-      // Total de clientes ativos - removido (users são funcionários/admins, não clientes)
-
       setMetrics({
         totalProducts: productsCount || 0,
         totalSalesMonth: totalSales,
@@ -66,9 +68,14 @@ const DashboardMetrics: React.FC = () => {
 
       setLoading(false);
     };
-
     fetchMetrics();
-  }, []);
+  }, [user]);
+
+  if (authLoading || !user) {
+    return (
+      <div className="h-32 flex items-center justify-center text-slate-500">Carregando...</div>
+    );
+  }
 
   const metricsData = [
     {
