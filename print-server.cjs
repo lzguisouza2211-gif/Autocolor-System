@@ -26,8 +26,13 @@ async function printReceipt(items, total, payment, company) {
       let device, printer;
       // Tenta detectar impressora serial virtual (COM)
       const escposSerialPort = require('escpos-serialport');
-      const SerialPort = escposSerialPort.SerialPort;
-      device = new SerialPort('COM5', { baudRate: 9600 });
+      // Detecta construtor correto
+      let SerialPortConstructor = escposSerialPort.SerialPort || escposSerialPort.default || escposSerialPort;
+      // Se não for função, tenta usar diretamente
+      if (typeof SerialPortConstructor !== 'function') {
+        SerialPortConstructor = escposSerialPort;
+      }
+      device = new SerialPortConstructor('COM5', { baudRate: 9600 });
       printer = new escpos.Printer(device);
       const now = new Date();
       const dataHora = `${now.toLocaleDateString('pt-BR')} ${now.toLocaleTimeString('pt-BR')}`;
