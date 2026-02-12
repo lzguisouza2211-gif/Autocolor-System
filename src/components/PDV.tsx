@@ -362,7 +362,6 @@ const PDV: React.FC = () => {
       return;
     }
     // Permitir finalizar mesmo sem valor recebido
-    const recebido = parseFloat(valorRecebido.replace(',', '.'));
     // Se informado, pode calcular troco normalmente, mas não bloquear
     setFinalizing(true);
     setError(null);
