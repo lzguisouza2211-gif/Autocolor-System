@@ -271,7 +271,7 @@ const SalesHistory: React.FC = () => {
                             price: item.price
                           })),
                           total: selectedSale.total,
-                          payment: 'Reimpressão',
+                          payment: 'N/A',
                           company: { name: 'AutoColor' }
                         })
                       });
