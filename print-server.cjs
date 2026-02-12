@@ -73,6 +73,7 @@ function formatReceiptAsText(items, total, payment, company) {
   receipt += `           TOTAL: R$ ${Number(total).toFixed(2)}           \n`;
   receipt += `        Pagamento: ${payment}        \n`;
   receipt += '----------------------------------------\n\n';
+  receipt += 'Assinatura: ____________________________\n\n';
   receipt += '     Obrigado pela preferencia!     \n\n\n\n\n';
   
   return receipt;

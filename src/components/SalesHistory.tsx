@@ -256,12 +256,41 @@ const SalesHistory: React.FC = () => {
                 </div>
               </div>
 
-              <button
-                onClick={closeSaleDetail}
-                className="w-full bg-slate-900 text-white py-2 rounded-lg hover:bg-slate-800 transition font-medium text-sm"
-              >
-                Fechar
-              </button>
+              <div className="flex flex-col sm:flex-row gap-2 mt-4">
+                <button
+                  onClick={async () => {
+                    // Chamar endpoint de impressão
+                    try {
+                      await fetch('http://localhost:4000/api/print', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          items: selectedSale.sale_items.map(item => ({
+                            name: item.products?.name || `Produto ${item.product_id}`,
+                            qty: item.quantity,
+                            price: item.price
+                          })),
+                          total: selectedSale.total,
+                          payment: 'Reimpressão',
+                          company: { name: 'AutoColor' }
+                        })
+                      });
+                      alert('Pedido enviado para impressão!');
+                    } catch (err) {
+                      alert('Erro ao imprimir pedido. Verifique o servidor de impressão.');
+                    }
+                  }}
+                  className="w-full sm:w-auto bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-medium text-sm"
+                >
+                  Imprimir
+                </button>
+                <button
+                  onClick={closeSaleDetail}
+                  className="w-full sm:w-auto bg-slate-900 text-white py-2 rounded-lg hover:bg-slate-800 transition font-medium text-sm"
+                >
+                  Fechar
+                </button>
+              </div>
             </div>
           </div>
         </div>

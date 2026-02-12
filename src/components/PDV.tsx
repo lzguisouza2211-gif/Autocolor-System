@@ -361,11 +361,9 @@ const PDV: React.FC = () => {
       setError('Usuário não autenticado');
       return;
     }
+    // Permitir finalizar mesmo sem valor recebido
     const recebido = parseFloat(valorRecebido.replace(',', '.'));
-    if (isNaN(recebido) || recebido < total) {
-      setError('Valor recebido insuficiente para finalizar a venda');
-      return;
-    }
+    // Se informado, pode calcular troco normalmente, mas não bloquear
     setFinalizing(true);
     setError(null);
     setSuccess(null);
