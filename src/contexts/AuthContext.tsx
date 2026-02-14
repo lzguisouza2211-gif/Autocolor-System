@@ -28,7 +28,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(session?.user ?? null);
     });
 
+    // Deslogar usuário ao fechar/recarregar a página
+    const handleUnload = async () => {
+      await supabase.auth.signOut();
+      setUser(null);
+    };
+    window.addEventListener('beforeunload', handleUnload);
+
     return () => subscription.unsubscribe();
+    // Remove o listener ao desmontar
+    window.removeEventListener('beforeunload', handleUnload);
   }, []);
 
   const signOut = async () => {
