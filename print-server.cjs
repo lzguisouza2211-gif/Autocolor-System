@@ -28,12 +28,12 @@ async function printReceipt(items, total, payment, company) {
       fs.writeFileSync(filePath, receiptText);
       // Executa comando para enviar arquivo para impressora
       const { exec } = require('child_process');
-      exec(`copy ${filePath} COM5`, (error, stdout, stderr) => {
+      exec(`copy ${filePath} COM6`, (error, stdout, stderr) => {
         if (error) {
           console.error('❌ Erro ao imprimir via comando copy:', error.message);
           return;
         }
-        console.log('✅ Recibo enviado para impressora COM5');
+        console.log('✅ Recibo enviado para impressora COM6');
       });
       return { success: true, message: 'Recibo enviado para impressora via comando copy' };
     } catch (error) {
