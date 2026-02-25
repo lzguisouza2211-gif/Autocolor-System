@@ -98,18 +98,18 @@ const ProductsTable: React.FC = () => {
   };
 
   // Filtro de busca
-  const filteredProducts = products.filter(p => {
-    // Filtro de texto
-    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
-      (p.category || '').toLowerCase().includes(search.toLowerCase()) ||
-      (p.mark || '').toLowerCase().includes(search.toLowerCase()) ||
-      (p.barcode || '').toLowerCase().includes(search.toLowerCase());
-    
-    // Filtro de estoque crítico
-    const matchesEstoque = estoqueFilter === 'critico' ? p.stock <= 10 : true;
-    
-    return matchesSearch && matchesEstoque;
-  });
+  const filteredProducts = products
+    .filter(p => {
+      // Filtro de texto
+      const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
+        (p.category || '').toLowerCase().includes(search.toLowerCase()) ||
+        (p.mark || '').toLowerCase().includes(search.toLowerCase()) ||
+        (p.barcode || '').toLowerCase().includes(search.toLowerCase());
+      // Filtro de estoque crítico
+      const matchesEstoque = estoqueFilter === 'critico' ? p.stock <= 10 : true;
+      return matchesSearch && matchesEstoque;
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
