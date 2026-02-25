@@ -26,11 +26,12 @@ const Header: React.FC = () => {
       .from('products')
       .select('id, name, stock')
       .is('deleted_at', null)
-      .lte('stock', CRITICAL_STOCK_THRESHOLD)
-      .order('stock', { ascending: true });
+      .lte('stock', CRITICAL_STOCK_THRESHOLD);
 
     if (!error && data) {
-      setLowStock(data as LowStockProduct[]);
+      // Ordena por nome
+      const sorted = [...data].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
+      setLowStock(sorted as LowStockProduct[]);
     }
     setLoadingStock(false);
   };

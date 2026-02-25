@@ -71,15 +71,17 @@ const PDV: React.FC = () => {
 
   const inputRef = useRef<HTMLInputElement>(null);
   // Filtrar produtos localmente (mesma lógica da rota /produtos)
-  const filteredProducts = products.filter(p => {
-    const s = search.toLowerCase();
-    return (
-      p.name.toLowerCase().includes(s) ||
-      (p.category || '').toLowerCase().includes(s) ||
-      (p.mark || '').toLowerCase().includes(s) ||
-      (p.barcode || '').toLowerCase().includes(s)
-    );
-  });
+  const filteredProducts = products
+    .filter(p => {
+      const s = search.toLowerCase();
+      return (
+        p.name.toLowerCase().includes(s) ||
+        (p.category || '').toLowerCase().includes(s) ||
+        (p.mark || '').toLowerCase().includes(s) ||
+        (p.barcode || '').toLowerCase().includes(s)
+      );
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
   // Estado para navegação por teclado no carrinho
   const [selectedCartIndex, setSelectedCartIndex] = useState<number>(-1);
   // Estado para navegação por teclado na lista de produtos filtrados
