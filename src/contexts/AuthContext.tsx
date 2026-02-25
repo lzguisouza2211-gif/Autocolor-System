@@ -17,7 +17,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return stored ? JSON.parse(stored) : null;
   });
   const [loading, setLoading] = useState(true);
-  const refreshInterval = useRef<NodeJS.Timeout | null>(null);
+  const refreshInterval = useRef<number | null>(null);
 
   useEffect(() => {
     // Função para atualizar usuário e persistir no localStorage
@@ -42,7 +42,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     // Intervalo para renovar sessão periodicamente (a cada 9 minutos)
-    refreshInterval.current = setInterval(async () => {
+    refreshInterval.current = window.setInterval(async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         updateUser(session.user);
@@ -53,7 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => {
       subscription.unsubscribe();
-      if (refreshInterval.current) clearInterval(refreshInterval.current);
+      if (refreshInterval.current) window.clearInterval(refreshInterval.current);
     };
   }, []);
 
