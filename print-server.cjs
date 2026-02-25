@@ -10,14 +10,7 @@ const app = express();
 app.use(cors()); // Permite requisições do frontend
 app.use(express.json());
 
-/**
- * Encontra a impressora USB conectada
- */
-
-
-/**
- * Formata e imprime o recibo usando escpos
- */
+/**Formata e imprime o recibo usando escpos*/
 async function printReceipt(items, total, payment, company) {
   // Para Windows, detecta se impressora está como USB ou Serial (COM)
   if (isWindows) {
