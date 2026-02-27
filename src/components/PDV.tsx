@@ -251,12 +251,10 @@ const PDV: React.FC = () => {
                   }
                 : item
             );
-          // Move o item atualizado para o topo
-          const moved = [
-            updated.find((item) => item.product_id === product.id),
-            ...updated.filter((item) => item.product_id !== product.id)
-          ];
-          return moved;
+          // Move o item atualizado para o topo, removendo undefined
+          const movedItem = updated.find((item) => item.product_id === product.id);
+          const rest = updated.filter((item) => item.product_id !== product.id);
+          return movedItem ? [movedItem, ...rest] : rest;
         } else {
           return [
             {
