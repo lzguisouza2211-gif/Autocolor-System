@@ -216,7 +216,6 @@ const PDV: React.FC = () => {
       // Só EMBALAGEM pode ser adicionado como item separado
       if (product.name.trim().toUpperCase() === 'EMBALAGEM') {
         return [
-          ...prev,
           {
             product_id: product.id,
             name: product.name,
@@ -232,6 +231,7 @@ const PDV: React.FC = () => {
             color: product.color,
             is_customizable: product.is_customizable,
           },
+          ...prev,
         ];
       } else {
         const existing = prev.find((item) => item.product_id === product.id);
@@ -240,18 +240,25 @@ const PDV: React.FC = () => {
             setError('Estoque insuficiente');
             return prev;
           }
-          return prev.map((item) =>
-            item.product_id === product.id
-              ? {
-                  ...item,
-                  quantity: item.quantity + 1,
-                  subtotal: (item.quantity + 1) * (product.price_sale ?? product.price),
-                }
-              : item
-          );
+          // Atualiza quantidade, mantém item no topo
+          const updated = prev
+            .map((item) =>
+              item.product_id === product.id
+                ? {
+                    ...item,
+                    quantity: item.quantity + 1,
+                    subtotal: (item.quantity + 1) * (product.price_sale ?? product.price),
+                  }
+                : item
+            );
+          // Move o item atualizado para o topo
+          const moved = [
+            updated.find((item) => item.product_id === product.id),
+            ...updated.filter((item) => item.product_id !== product.id)
+          ];
+          return moved;
         } else {
           return [
-            ...prev,
             {
               product_id: product.id,
               name: product.name,
@@ -267,6 +274,7 @@ const PDV: React.FC = () => {
               color: product.color,
               is_customizable: product.is_customizable,
             },
+            ...prev,
           ];
         }
       }
