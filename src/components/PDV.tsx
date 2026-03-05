@@ -483,7 +483,7 @@ const PDV: React.FC = () => {
 
   return (
     <div className="w-full h-full p-0 m-0">
-      <div className="w-full h-full grid grid-cols-1 lg:grid-cols-[42%_58%] gap-0 bg-transparent">
+      <div className="w-full h-full grid grid-cols-1 lg:grid-cols-[60%_40%] gap-0 bg-transparent">
         {/* Coluna esquerda: busca e resultados - APENAS DESKTOP */}
         <div className="hidden lg:flex flex-col h-full bg-white p-10">
           <div className="flex items-center justify-between mb-4">

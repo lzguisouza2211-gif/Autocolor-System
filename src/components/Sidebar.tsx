@@ -1,9 +1,9 @@
+
 import React from 'react';
 import { Icon } from '@iconify/react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-// Hook para simular dados do usuário
 function useUser() {
   const { user } = useAuth();
   return {
@@ -13,10 +13,35 @@ function useUser() {
   };
 }
 
-const Sidebar: React.FC = () => {
+const navItems = [
+  { to: '/visao-geral', icon: 'solar:widget-2-linear', label: 'Dashboard' },
+  { to: '/produtos', icon: 'solar:box-linear', label: 'Produtos' },
+  { to: '/vendas', icon: 'solar:cart-large-minimalistic-linear', label: 'Vendas' },
+  // { to: '/clientes', icon: 'solar:users-group-two-rounded-linear', label: 'Clientes' },
+  // { to: '/relatorios', icon: 'solar:chart-2-linear', label: 'Relatórios' },
+];
+
+
+interface SidebarProps {
+  onOpenChange?: (open: boolean) => void;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ onOpenChange }) => {
   const user = useUser();
   const { signOut } = useAuth();
   const navigate = useNavigate();
+  const [open, setOpen] = React.useState(false);
+  const sidebarRef = React.useRef<HTMLDivElement>(null);
+
+  // Mouse enter/leave para abrir/fechar
+  const handleMouseEnter = () => {
+    setOpen(true);
+    onOpenChange && onOpenChange(true);
+  };
+  const handleMouseLeave = () => {
+    setOpen(false);
+    onOpenChange && onOpenChange(false);
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -24,60 +49,56 @@ const Sidebar: React.FC = () => {
   };
 
   return (
-    <aside className="hidden lg:flex w-64 border-r border-gray-200 bg-white flex-col h-full sticky top-0">
-      {/* Perfil do usuário no topo */}
-      <div className="p-6 border-b border-gray-100">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-indigo-100 border border-indigo-200 flex items-center justify-center text-indigo-700 text-sm font-medium">{user.initials}</div>
-          <div className="flex flex-col">
-            <span className="text-sm font-medium text-slate-900">{user.name}</span>
-            <span className="text-xs text-slate-500">{user.role}</span>
-          </div>
+    <>
+      {/* Área sensível invisível para abrir o sidebar */}
+      <div
+        onMouseEnter={handleMouseEnter}
+        style={{ width: open ? 0 : 12, minWidth: 0, height: '100vh', position: 'absolute', left: 0, top: 0, zIndex: 30, background: 'transparent', transition: 'width 0.2s' }}
+      />
+      <aside
+        id="sidebar-autocolor"
+        ref={sidebarRef}
+        onMouseLeave={handleMouseLeave}
+        className={`h-screen flex flex-col py-4 shadow-xl border-r border-slate-200 bg-white transition-all duration-300 ease-in-out ${open ? 'w-[220px]' : 'w-[0px]'} relative overflow-hidden`}
+        style={{ transitionProperty: 'width, box-shadow, background', transitionDuration: '300ms', zIndex: 20 }}
+      >
+        {/* Logo ou ícone do sistema */}
+        <div className={`mb-8 flex items-center gap-3 px-4 transition-all duration-300 ${open ? 'justify-start' : 'justify-center'}`}>
+          {open && <span className="text-slate-800 text-lg font-bold tracking-tight ml-2">AutoColor</span>}
         </div>
-      </div>
 
-      <div className="p-4 flex flex-col gap-1 flex-1">
-        <p className="px-2 text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Gestão</p>
-        <NavLink
-          to="/visao-geral"
-          className={({ isActive }) =>
-            `nav-item w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'} border border-transparent`
-          }
-        >
-          <Icon icon="solar:widget-2-linear" width={18} />
-          Visão Geral
-        </NavLink>
-        <NavLink
-          to="/produtos"
-          className={({ isActive }) =>
-            `nav-item w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'} border border-transparent`
-          }
-        >
-          <Icon icon="solar:box-linear" width={18} />
-          Produtos
-        </NavLink>
-        <NavLink
-          to="/vendas"
-          className={({ isActive }) =>
-            `nav-item w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'} border border-transparent`
-          }
-        >
-          <Icon icon="solar:cart-large-minimalistic-linear" width={18} />
-          Vendas (PDV)
-        </NavLink>
-      </div>
-      
-      {/* Botão de sair no rodapé */}
-      <div className="p-4 border-t border-gray-100">
-        <button
-          onClick={handleSignOut}
-          className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-md transition-colors"
-        >
-          <Icon icon="solar:logout-2-linear" width={18} />
-          Sair
-        </button>
-      </div>
-    </aside>
+        {/* Grupo principal de navegação */}
+        <nav className="flex flex-col gap-2 w-full flex-1">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 h-12 rounded-lg transition-all duration-200 text-slate-500 hover:text-indigo-700 hover:bg-indigo-100 ${isActive ? 'bg-indigo-200 text-indigo-700 font-semibold' : ''} ${open ? 'justify-start' : 'justify-center'}`
+              }
+              title={item.label}
+            >
+              <Icon icon={item.icon} width={22} />
+              {open && <span className="text-base">{item.label}</span>}
+            </NavLink>
+          ))}
+        </nav>
+
+        <div className="flex-1" />
+
+        {/* Grupo inferior: configurações e usuário */}
+        <div className={`flex flex-col items-center gap-4 mb-2 px-2 ${open ? 'items-start' : 'items-center'}`}>
+          <button
+            onClick={handleSignOut}
+            className={`flex items-center gap-3 w-full h-12 rounded-lg transition-all duration-200 text-red-400 hover:text-white hover:bg-red-400/80 px-4 ${open ? 'justify-start bg-red-50' : 'justify-center'}`}
+            title="Sair"
+          >
+            <Icon icon="solar:logout-2-linear" width={22} />
+            {open && <span className="text-base">Sair</span>}
+          </button>
+        </div>
+      </aside>
+    </>
   );
 };
 
