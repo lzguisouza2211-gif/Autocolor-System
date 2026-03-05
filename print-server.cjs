@@ -55,7 +55,9 @@ function formatReceiptAsText(items, total, payment, company) {
   
   if (items && items.length > 0) {
     items.forEach(item => {
-      const itemName = `${item.name} x${item.qty}`;
+      // Usa custom_name se existir, senão name
+      const displayName = item.custom_name && item.custom_name.trim() !== '' ? item.custom_name : item.name;
+      const itemName = `${displayName} x${item.qty}`;
       const itemPrice = `R$ ${Number(item.price).toFixed(2)}`;
       const spaces = 40 - itemName.length - itemPrice.length;
       receipt += itemName + ' '.repeat(Math.max(1, spaces)) + itemPrice + '\n';
