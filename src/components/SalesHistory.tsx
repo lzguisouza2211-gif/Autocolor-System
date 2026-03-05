@@ -297,13 +297,19 @@ const SalesHistory: React.FC = () => {
                     if (!window.confirm('Tem certeza que deseja deletar esta venda? Esta ação não pode ser desfeita.')) return;
                     try {
                       // 1. Devolver estoque dos produtos
-                      const updates = selectedSale.sale_items.map(item =>
-                        supabase
+                      // Buscar estoque atual de cada produto antes de atualizar
+                      await Promise.all(selectedSale.sale_items.map(async item => {
+                        const { data: product, error: prodError } = await supabase
                           .from('products')
-                          .update({ stock: (item.products?.stock ?? 0) + item.quantity })
+                          .select('stock')
                           .eq('id', item.product_id)
-                      );
-                      await Promise.all(updates);
+                          .single();
+                        if (prodError || !product) return;
+                        return supabase
+                          .from('products')
+                          .update({ stock: product.stock + item.quantity })
+                          .eq('id', item.product_id);
+                      }));
 
                       // 2. Deletar a venda
                       const { error } = await supabase
