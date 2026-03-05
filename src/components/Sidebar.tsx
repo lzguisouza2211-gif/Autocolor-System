@@ -4,14 +4,6 @@ import { Icon } from '@iconify/react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-function useUser() {
-  const { user } = useAuth();
-  return {
-    name: user?.email?.split('@')[0] || 'Usuário',
-    role: 'Admin',
-    initials: user?.email?.substring(0, 2).toUpperCase() || 'AD',
-  };
-}
 
 const navItems = [
   { to: '/visao-geral', icon: 'solar:widget-2-linear', label: 'Dashboard' },
@@ -31,7 +23,6 @@ const Sidebar: React.FC<SidebarProps> = ({ onOpenChange }) => {
   const navigate = useNavigate();
   const [open, setOpen] = React.useState(false);
   const sidebarRef = React.useRef<HTMLDivElement>(null);
-  const user = useUser(); // Só para pegar as iniciais
 
   // Mouse enter/leave para abrir/fechar
   const handleMouseEnter = () => {
