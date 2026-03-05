@@ -27,11 +27,11 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ onOpenChange }) => {
-  const user = useUser();
   const { signOut } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = React.useState(false);
   const sidebarRef = React.useRef<HTMLDivElement>(null);
+  const user = useUser(); // Só para pegar as iniciais
 
   // Mouse enter/leave para abrir/fechar
   const handleMouseEnter = () => {

@@ -7,12 +7,11 @@ import ProductsTable from './components/ProductsTable';
 
 function App() {
   const [ tab ] = useState<string>("dashboard");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Passa o estado do sidebar para o componente Sidebar
   return (
     <div className="bg-gray-50 text-slate-800 font-sans h-screen flex overflow-hidden">
-      <Sidebar onOpenChange={setSidebarOpen} />
+      <Sidebar />
       <main
         className="flex-1 flex flex-col h-full overflow-hidden bg-gray-50/50 relative transition-all duration-300"
       >
