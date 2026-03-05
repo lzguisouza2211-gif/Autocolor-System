@@ -16,6 +16,7 @@ interface SaleDetail {
     price: number;
     original_price: number;
     discount: number;
+    custom_name?: string | null;
     products: {
       name: string;
     };
@@ -75,6 +76,7 @@ const SalesHistory: React.FC = () => {
           price,
           original_price,
           discount,
+          custom_name,
           products (name)
         )
       `)
@@ -226,7 +228,7 @@ const SalesHistory: React.FC = () => {
                   {selectedSale.sale_items.map((item, idx) => (
                     <div key={idx} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
                       <div className="flex-1">
-                        <p className="text-sm text-slate-900">{item.products?.name || `Produto ${item.product_id}`}</p>
+                        <p className="text-sm text-slate-900">{item.custom_name?.trim() ? item.custom_name : (item.products?.name || `Produto ${item.product_id}`)}</p>
                         <p className="text-xs text-slate-500">{item.quantity}x R$ {parseFloat(item.price.toString()).toFixed(2)}</p>
                       </div>
                       <div className="text-right">
@@ -266,7 +268,7 @@ const SalesHistory: React.FC = () => {
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                           items: selectedSale.sale_items.map(item => ({
-                            name: item.products?.name || `Produto ${item.product_id}`,
+                            name: item.custom_name?.trim() ? item.custom_name : (item.products?.name || `Produto ${item.product_id}`),
                             qty: item.quantity,
                             price: item.price
                           })),
@@ -289,6 +291,39 @@ const SalesHistory: React.FC = () => {
                   className="w-full sm:w-auto bg-slate-900 text-white py-2 rounded-lg hover:bg-slate-800 transition font-medium text-sm"
                 >
                   Fechar
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!window.confirm('Tem certeza que deseja deletar esta venda? Esta ação não pode ser desfeita.')) return;
+                    try {
+                      // 1. Devolver estoque dos produtos
+                      const updates = selectedSale.sale_items.map(item =>
+                        supabase
+                          .from('products')
+                          .update({ stock: (item.products?.stock ?? 0) + item.quantity })
+                          .eq('id', item.product_id)
+                      );
+                      await Promise.all(updates);
+
+                      // 2. Deletar a venda
+                      const { error } = await supabase
+                        .from('sales')
+                        .delete()
+                        .eq('id', selectedSale.id);
+                      if (error) {
+                        alert('Erro ao deletar venda: ' + error.message);
+                        return;
+                      }
+                      alert('Venda deletada com sucesso!');
+                      setShowModal(false);
+                      fetchAllSales();
+                    } catch (err) {
+                      alert('Erro inesperado ao deletar venda.');
+                    }
+                  }}
+                  className="w-full sm:w-auto bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition font-medium text-sm"
+                >
+                  Deletar Venda
                 </button>
               </div>
             </div>
