@@ -339,11 +339,29 @@ const PDV: React.FC = () => {
   // Atualizar nome do item (para produtos customizáveis)
   // Atualizar nome do item (para produtos customizáveis)
   const updateItemName = (index: number, newName: string) => {
-    setCart((prev) =>
-      prev.map((item, idx) =>
+    setCart((prev) => {
+      // Salvar histórico se for EMBALAGEM e nome mudou
+      const item = prev[index];
+      if (item && item.name.trim().toUpperCase() === 'EMBALAGEM' && newName.trim() !== item.name.trim()) {
+        // Salva no banco
+        supabase.from('embalagem_nome_historico').insert([
+          {
+            cart_item_id: null, // Não há id do item do carrinho, pode ser null
+            product_id: item.product_id,
+            nome_antigo: item.name,
+            nome_novo: newName,
+            user_id: user?.id ?? null
+          }
+        ]).then(({ error }) => {
+          if (error) {
+            console.error('Erro ao salvar histórico de nome de EMBALAGEM:', error);
+          }
+        });
+      }
+      return prev.map((item, idx) =>
         idx === index ? { ...item, name: newName } : item
-      )
-    );
+      );
+    });
   };
 
   // Remover item
@@ -403,6 +421,7 @@ const PDV: React.FC = () => {
         price: item.price_sale,
         original_price: item.original_price,
         discount: item.discount,
+        custom_name: (item.is_customizable || item.name.trim().toUpperCase() === 'EMBALAGEM') && item.name ? item.name : null,
       }));
       
       console.log('=== DETALHES DA INSERÇÃO ===');
