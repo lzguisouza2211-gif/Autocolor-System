@@ -676,7 +676,7 @@ const PDV: React.FC = () => {
                           />
                         ) : (
                           <>
-                            <div className="font-semibold text-base md:text-lg break-words">{item.name}</div>
+                            <div className={`font-semibold text-base md:text-lg ${document.getElementById('sidebar-autocolor')?.offsetWidth && document.getElementById('sidebar-autocolor')?.offsetWidth > 100 ? 'truncate' : 'break-words'}`}>{item.name}</div>
                             <div className="text-xs text-gray-500 flex flex-wrap gap-2 break-words">
                               {item.category && <span>{item.category}</span>}
                               {item.mark && <span>{item.mark}</span>}
@@ -693,7 +693,22 @@ const PDV: React.FC = () => {
                             onClick={() => changeQuantity(idx, -1)}
                             disabled={item.quantity <= 1 || finalizing}
                           >-</button>
-                          <span className="w-6 md:w-7 text-center text-sm font-semibold text-slate-700">{item.quantity}</span>
+                          <input
+                            type="number"
+                            min={1}
+                            max={item.stock}
+                            value={item.quantity}
+                            disabled={finalizing}
+                            onChange={e => {
+                              let value = parseInt(e.target.value, 10);
+                              if (isNaN(value) || value < 1) value = 1;
+                              if (value > item.stock) value = item.stock;
+                              changeQuantity(idx, value - item.quantity);
+                            }}
+                            className="w-10 md:w-12 text-center text-sm font-semibold text-slate-700 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            style={{ MozAppearance: 'textfield', appearance: 'textfield' }}
+                            onWheel={e => e.currentTarget.blur()}
+                          />
                           <button
                             className="w-6 h-6 md:w-7 md:h-7 rounded-md bg-white border text-sm font-semibold flex items-center justify-center"
                             onClick={() => changeQuantity(idx, 1)}
