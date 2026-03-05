@@ -3,6 +3,7 @@ import React from 'react';
 import { Icon } from '@iconify/react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { SidebarOpenContext } from './SidebarContext.tsx';
 
 
 const navItems = [
@@ -40,7 +41,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onOpenChange }) => {
   };
 
   return (
-    <>
+    <SidebarOpenContext.Provider value={open}>
       {/* Área sensível invisível para abrir o sidebar */}
       <div
         onMouseEnter={handleMouseEnter}
@@ -89,7 +90,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onOpenChange }) => {
           </button>
         </div>
       </aside>
-    </>
+    </SidebarOpenContext.Provider>
   );
 };
 

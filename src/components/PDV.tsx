@@ -1,5 +1,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
+import { SidebarNameTruncate } from './SidebarContext.tsx';
 import BarcodeScanner from './BarcodeScanner';
 import { FiTrash2 } from 'react-icons/fi';
 import { supabase } from '../supabase';
@@ -676,7 +677,7 @@ const PDV: React.FC = () => {
                           />
                         ) : (
                           <>
-                            <div className={`font-semibold text-base md:text-lg ${document.getElementById('sidebar-autocolor')?.offsetWidth && document.getElementById('sidebar-autocolor')?.offsetWidth > 100 ? 'truncate' : 'break-words'}`}>{item.name}</div>
+                            <SidebarNameTruncate>{item.name}</SidebarNameTruncate>
                             <div className="text-xs text-gray-500 flex flex-wrap gap-2 break-words">
                               {item.category && <span>{item.category}</span>}
                               {item.mark && <span>{item.mark}</span>}
