@@ -491,6 +491,39 @@ const SalesHistory: React.FC = () => {
                           .eq('id', selectedSale.id);
                         alert('Venda atualizada com sucesso!');
                         setEditMode(false);
+                        // Atualizar a venda selecionada no modal e na lista
+                        const { data: updatedSale } = await supabase
+                          .from('sales')
+                          .select(`
+                            id,
+                            total,
+                            created_at,
+                            user_id,
+                            sale_items!fk_sale_items_sale_id (
+                              product_id,
+                              quantity,
+                              price,
+                              original_price,
+                              discount,
+                              custom_name,
+                              products (name)
+                            )
+                          `)
+                          .eq('id', selectedSale.id)
+                          .single();
+                        if (updatedSale) {
+                          // Buscar usuário
+                          let userData = null;
+                          if (updatedSale.user_id) {
+                            const { data } = await supabase
+                              .from('users')
+                              .select('name, email')
+                              .eq('id', updatedSale.user_id)
+                              .single();
+                            userData = data;
+                          }
+                          setSelectedSale({ ...updatedSale, users: userData });
+                        }
                         fetchAllSales();
                       }}
                       className="w-full sm:w-auto bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition font-medium text-sm"
