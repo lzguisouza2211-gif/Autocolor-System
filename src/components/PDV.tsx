@@ -654,7 +654,7 @@ const PDV: React.FC = () => {
                     tabIndex={-1}
                   >
                     {/* Layout Desktop */}
-                    <div className="hidden lg:flex items-center gap-3">
+                    <div className="hidden lg:flex items-center gap-3 min-w-[520px]">
                       <div className="flex items-center justify-center">
                         <button
                           className="p-1.5 rounded-full hover:bg-red-100 text-red-500"
@@ -677,7 +677,7 @@ const PDV: React.FC = () => {
                           />
                         ) : (
                           <>
-                            <SidebarNameTruncate>{item.name}</SidebarNameTruncate>
+                            <div className="truncate font-semibold text-base md:text-lg min-w-0 max-w-full">{item.name}</div>
                             <div className="text-xs text-gray-500 flex flex-wrap gap-2 break-words">
                               {item.category && <span>{item.category}</span>}
                               {item.mark && <span>{item.mark}</span>}
