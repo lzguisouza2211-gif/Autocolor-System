@@ -76,9 +76,13 @@ function App() {
             </div>
           )}
           {tab === 'sales' && (
-            <div className="space-y-6 fade-in">
-              <h1 className="text-xl font-medium tracking-tight text-slate-900">PDV / Vendas</h1>
-              <p className="text-sm text-slate-500 mt-1">Em breve: tela de vendas.</p>
+            <div className="flex flex-row gap-6 fade-in w-full h-full">
+              {/* Painel do carrinho (direita) */}
+              <div className="w-full max-w-[600px] min-w-[420px] flex-shrink-0">
+                <PDV />
+              </div>
+              {/* Painel da venda (esquerda) */}
+              <div className="flex-1 min-w-0" />
             </div>
           )}
         </div>
