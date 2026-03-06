@@ -235,7 +235,7 @@ const SalesHistory: React.FC = () => {
                         <div className="flex-1">
                           <input
                             className="text-sm text-slate-900 border rounded px-2 py-1 w-full mb-1"
-                            value={item.custom_name?.trim() ? item.custom_name : (item.products?.name || `Produto ${item.product_id}`)}
+                            value={item.custom_name ?? (item.products?.name || `Produto ${item.product_id}`)}
                             onChange={e => {
                               const val = e.target.value;
                               setEditedItems(items => items.map((it, i) => i === idx ? { ...it, custom_name: val } : it));
