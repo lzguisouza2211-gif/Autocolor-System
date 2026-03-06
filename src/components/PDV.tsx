@@ -653,7 +653,7 @@ const PDV: React.FC = () => {
                     tabIndex={-1}
                   >
                     {/* Layout Desktop */}
-                    <div className="hidden lg:flex items-center gap-3 w-full whitespace-nowrap overflow-x-auto">
+                    <div className="hidden lg:flex items-center gap-2 w-full whitespace-nowrap overflow-x-hidden">
                       <div className="flex items-center justify-center flex-shrink-0">
                         <button
                           className="p-1.5 rounded-full hover:bg-red-100 text-red-500"
@@ -664,7 +664,7 @@ const PDV: React.FC = () => {
                           <FiTrash2 size={16} />
                         </button>
                       </div>
-                      <div className="flex-1 min-w-0 max-w-none flex flex-col justify-center">
+                      <div className="flex-1 min-w-0 max-w-[320px] flex flex-col justify-center">
                         {item.is_customizable ? (
                           <input
                             type="text"
@@ -676,7 +676,7 @@ const PDV: React.FC = () => {
                           />
                         ) : (
                           <>
-                            <div className="font-semibold text-base md:text-lg min-w-0 truncate">{item.name}</div>
+                            <div className="font-semibold text-base md:text-lg min-w-0 truncate" title={item.name}>{item.name}</div>
                             <div className="text-xs text-gray-500 flex flex-wrap gap-2 truncate">
                               {item.category && <span>{item.category}</span>}
                               {item.mark && <span>{item.mark}</span>}
@@ -686,7 +686,7 @@ const PDV: React.FC = () => {
                           </>
                         )}
                       </div>
-                      <div className="flex justify-center flex-shrink-0 min-w-[120px]">
+                      <div className="flex justify-center flex-shrink-0 min-w-[80px] max-w-[90px]">
                         <div className="flex items-center gap-1 bg-gray-50 rounded-md px-1 py-0.5 border border-gray-200">
                           <button
                             className="w-6 h-6 md:w-7 md:h-7 rounded-md bg-white border text-sm font-semibold flex items-center justify-center"
@@ -716,7 +716,7 @@ const PDV: React.FC = () => {
                           >+</button>
                         </div>
                       </div>
-                      <div className="flex items-center justify-end flex-shrink-0 min-w-[100px]">
+                      <div className="flex items-center justify-end flex-shrink-0 min-w-[70px] max-w-[80px]">
                         <input
                           type="number"
                           min="0"
@@ -733,7 +733,7 @@ const PDV: React.FC = () => {
                           className="w-full text-right text-sm font-medium text-slate-900 border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-200"
                         />
                       </div>
-                      <div className="text-right flex items-center justify-end gap-1 flex-shrink-0 min-w-[100px]">
+                      <div className="text-right flex items-center justify-end gap-1 flex-shrink-0 min-w-[70px] max-w-[80px]">
                         <span className="text-sm text-gray-500">R$</span>
                         <input
                           type="text"
