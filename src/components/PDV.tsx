@@ -36,6 +36,8 @@ interface CartItem {
 }
 
 const PDV: React.FC = () => {
+  // Estado para abrir/fechar o carrinho (sidebar)
+  const [cartOpen, setCartOpen] = useState(true);
     // Estado para abrir scanner
     const [scannerOpen, setScannerOpen] = useState(false);
     // Handler para código de barras detectado
@@ -483,7 +485,7 @@ const PDV: React.FC = () => {
 
   return (
     <div className="w-full h-full p-0 m-0">
-      <div className="w-full h-full grid grid-cols-1 lg:grid-cols-[50%_50%] gap-0 bg-transparent">
+      <div className="w-full h-full grid grid-cols-1 lg:grid-cols-[50%_auto] gap-0 bg-transparent relative">
         {/* Coluna esquerda: busca e resultados - APENAS DESKTOP */}
         <div className="hidden lg:flex flex-col h-full bg-white p-10">
           <div className="flex items-center justify-between mb-4">
@@ -571,7 +573,27 @@ const PDV: React.FC = () => {
         </div>
 
         {/* Coluna direita: carrinho e resumo - TELA TODA NO MOBILE */}
-        <div className="flex flex-col h-full bg-white p-4 lg:p-10 overflow-hidden">
+        {/* Botão para abrir/fechar o carrinho (sidebar) */}
+        {/* Botão para abrir/fechar carrinho - visível em todas as telas, mas posição diferente no mobile */}
+        <button
+          className={`fixed top-6 right-6 z-50 bg-slate-900 text-white rounded-full shadow-lg p-3 transition-transform duration-300 ${cartOpen ? '' : 'translate-x-[320px]'} lg:block`}
+          style={{ minWidth: 48, minHeight: 48 }}
+          onClick={() => setCartOpen((open) => !open)}
+          aria-label={cartOpen ? 'Fechar carrinho' : 'Abrir carrinho'}
+        >
+          {cartOpen ? (
+            <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M18 6L6 18M6 6l12 12"/></svg>
+          ) : (
+            <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+          )}
+        </button>
+        {/* Sidebar do carrinho - responsiva */}
+        <div
+          className={`flex flex-col h-full bg-white p-4 lg:p-10 overflow-hidden fixed top-0 right-0 z-40 transition-transform duration-300 w-full max-w-full h-screen border-l border-gray-200
+            ${cartOpen ? 'translate-x-0' : 'translate-x-full'}
+            lg:w-[420px] lg:relative lg:translate-x-0 lg:h-full lg:border-l-0
+          `}
+        >
           {/* Busca no mobile - no topo do carrinho */}
           <div className="lg:hidden mb-4 shrink-0">
             <div className="flex items-center justify-between mb-3">
