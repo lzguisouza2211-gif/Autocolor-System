@@ -30,6 +30,8 @@ const SalesHistory: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [selectedSale, setSelectedSale] = useState<SaleDetail | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editedItems, setEditedItems] = useState<any[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -109,6 +111,8 @@ const SalesHistory: React.FC = () => {
   const openSaleDetail = (sale: SaleDetail) => {
     setSelectedSale(sale);
     setShowModal(true);
+    setEditMode(false);
+    setEditedItems(sale.sale_items.map(item => ({ ...item })));
   };
 
   const closeSaleDetail = () => {
@@ -225,20 +229,77 @@ const SalesHistory: React.FC = () => {
               <div>
                 <h3 className="text-sm font-semibold text-slate-900 mb-3">Itens</h3>
                 <div className="space-y-2 border border-gray-200 rounded-lg p-4">
-                  {selectedSale.sale_items.map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-                      <div className="flex-1">
-                        <p className="text-sm text-slate-900">{item.custom_name?.trim() ? item.custom_name : (item.products?.name || `Produto ${item.product_id}`)}</p>
-                        <p className="text-xs text-slate-500">{item.quantity}x R$ {parseFloat(item.price.toString()).toFixed(2)}</p>
+                  {editMode ? (
+                    editedItems.map((item, idx) => (
+                      <div key={idx} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0 gap-2">
+                        <div className="flex-1">
+                          <input
+                            className="text-sm text-slate-900 border rounded px-2 py-1 w-full mb-1"
+                            value={item.custom_name?.trim() ? item.custom_name : (item.products?.name || `Produto ${item.product_id}`)}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setEditedItems(items => items.map((it, i) => i === idx ? { ...it, custom_name: val } : it));
+                            }}
+                          />
+                          <div className="flex gap-2 items-center">
+                            <input
+                              type="number"
+                              min={1}
+                              className="w-16 border rounded px-1 py-0.5 text-xs"
+                              value={item.quantity}
+                              onChange={e => {
+                                const val = Math.max(1, Number(e.target.value));
+                                setEditedItems(items => items.map((it, i) => i === idx ? { ...it, quantity: val } : it));
+                              }}
+                            />
+                            <span className="text-xs">x</span>
+                            <input
+                              type="number"
+                              min={0}
+                              step={0.01}
+                              className="w-20 border rounded px-1 py-0.5 text-xs"
+                              value={item.price}
+                              onChange={e => {
+                                const val = Number(e.target.value);
+                                setEditedItems(items => items.map((it, i) => i === idx ? { ...it, price: val } : it));
+                              }}
+                            />
+                            <span className="text-xs">Desconto:</span>
+                            <input
+                              type="number"
+                              min={0}
+                              step={0.01}
+                              className="w-16 border rounded px-1 py-0.5 text-xs"
+                              value={item.discount}
+                              onChange={e => {
+                                const val = Number(e.target.value);
+                                setEditedItems(items => items.map((it, i) => i === idx ? { ...it, discount: val } : it));
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <button
+                          className="text-xs text-red-600 hover:underline"
+                          onClick={() => setEditedItems(items => items.filter((_, i) => i !== idx))}
+                        >Remover</button>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm font-medium text-slate-900">R$ {(parseFloat(item.price.toString()) * item.quantity).toFixed(2)}</p>
-                        {item.discount > 0 && (
-                          <p className="text-xs text-orange-600">Desc: R$ {(item.discount * item.quantity).toFixed(2)}</p>
-                        )}
+                    ))
+                  ) : (
+                    selectedSale.sale_items.map((item, idx) => (
+                      <div key={idx} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                        <div className="flex-1">
+                          <p className="text-sm text-slate-900">{item.custom_name?.trim() ? item.custom_name : (item.products?.name || `Produto ${item.product_id}`)}</p>
+                          <p className="text-xs text-slate-500">{item.quantity}x R$ {parseFloat(item.price.toString()).toFixed(2)}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium text-slate-900">R$ {(parseFloat(item.price.toString()) * item.quantity).toFixed(2)}</p>
+                          {item.discount > 0 && (
+                            <p className="text-xs text-orange-600">Desc: R$ {(item.discount * item.quantity).toFixed(2)}</p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
 
@@ -259,78 +320,185 @@ const SalesHistory: React.FC = () => {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-2 mt-4">
-                <button
-                  onClick={async () => {
-                    // Chamar endpoint de impressão
-                    try {
-                      await fetch('http://localhost:4000/api/print', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          items: selectedSale.sale_items.map(item => ({
-                            name: item.custom_name?.trim() ? item.custom_name : (item.products?.name || `Produto ${item.product_id}`),
-                            qty: item.quantity,
-                            price: item.price
-                          })),
-                          total: selectedSale.total,
-                          payment: 'N/A',
-                          company: { name: 'AutoColor' }
-                        })
-                      });
-                      alert('Pedido enviado para impressão!');
-                    } catch (err) {
-                      alert('Erro ao imprimir pedido. Verifique o servidor de impressão.');
-                    }
-                  }}
-                  className="w-full sm:w-auto bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-medium text-sm"
-                >
-                  Imprimir
-                </button>
-                <button
-                  onClick={closeSaleDetail}
-                  className="w-full sm:w-auto bg-slate-900 text-white py-2 rounded-lg hover:bg-slate-800 transition font-medium text-sm"
-                >
-                  Fechar
-                </button>
-                <button
-                  onClick={async () => {
-                    if (!window.confirm('Tem certeza que deseja deletar esta venda? Esta ação não pode ser desfeita.')) return;
-                    try {
-                      // 1. Devolver estoque dos produtos
-                      // Buscar estoque atual de cada produto antes de atualizar
-                      await Promise.all(selectedSale.sale_items.map(async item => {
-                        const { data: product, error: prodError } = await supabase
-                          .from('products')
-                          .select('stock')
-                          .eq('id', item.product_id)
-                          .single();
-                        if (prodError || !product) return;
-                        return supabase
-                          .from('products')
-                          .update({ stock: product.stock + item.quantity })
-                          .eq('id', item.product_id);
-                      }));
+                {!editMode && (
+                  <>
+                    <button
+                      onClick={async () => {
+                        // Chamar endpoint de impressão
+                        try {
+                          await fetch('http://localhost:4000/api/print', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              items: selectedSale.sale_items.map(item => ({
+                                name: item.custom_name?.trim() ? item.custom_name : (item.products?.name || `Produto ${item.product_id}`),
+                                qty: item.quantity,
+                                price: item.price
+                              })),
+                              total: selectedSale.total,
+                              payment: 'N/A',
+                              company: { name: 'AutoColor' }
+                            })
+                          });
+                          alert('Pedido enviado para impressão!');
+                        } catch (err) {
+                          alert('Erro ao imprimir pedido. Verifique o servidor de impressão.');
+                        }
+                      }}
+                      className="w-full sm:w-auto bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-medium text-sm"
+                    >
+                      Imprimir
+                    </button>
+                    <button
+                      onClick={closeSaleDetail}
+                      className="w-full sm:w-auto bg-slate-900 text-white py-2 rounded-lg hover:bg-slate-800 transition font-medium text-sm"
+                    >
+                      Fechar
+                    </button>
+                    <button
+                      onClick={() => setEditMode(true)}
+                      className="w-full sm:w-auto bg-yellow-500 text-white py-2 rounded-lg hover:bg-yellow-600 transition font-medium text-sm"
+                    >
+                      Editar Venda
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!window.confirm('Tem certeza que deseja deletar esta venda? Esta ação não pode ser desfeita.')) return;
+                        try {
+                          // 1. Devolver estoque dos produtos
+                          // Buscar estoque atual de cada produto antes de atualizar
+                          await Promise.all(selectedSale.sale_items.map(async item => {
+                            const { data: product, error: prodError } = await supabase
+                              .from('products')
+                              .select('stock')
+                              .eq('id', item.product_id)
+                              .single();
+                            if (prodError || !product) return;
+                            return supabase
+                              .from('products')
+                              .update({ stock: product.stock + item.quantity })
+                              .eq('id', item.product_id);
+                          }));
 
-                      // 2. Deletar a venda
-                      const { error } = await supabase
-                        .from('sales')
-                        .delete()
-                        .eq('id', selectedSale.id);
-                      if (error) {
-                        alert('Erro ao deletar venda: ' + error.message);
-                        return;
-                      }
-                      alert('Venda deletada com sucesso!');
-                      setShowModal(false);
-                      fetchAllSales();
-                    } catch (err) {
-                      alert('Erro inesperado ao deletar venda.');
-                    }
-                  }}
-                  className="w-full sm:w-auto bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition font-medium text-sm"
-                >
-                  Deletar Venda
-                </button>
+                          // 2. Deletar a venda
+                          const { error } = await supabase
+                            .from('sales')
+                            .delete()
+                            .eq('id', selectedSale.id);
+                          if (error) {
+                            alert('Erro ao deletar venda: ' + error.message);
+                            return;
+                          }
+                          alert('Venda deletada com sucesso!');
+                          setShowModal(false);
+                          fetchAllSales();
+                        } catch (err) {
+                          alert('Erro inesperado ao deletar venda.');
+                        }
+                      }}
+                      className="w-full sm:w-auto bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition font-medium text-sm"
+                    >
+                      Deletar Venda
+                    </button>
+                  </>
+                )}
+                {editMode && (
+                  <>
+                    <button
+                      onClick={() => setEditMode(false)}
+                      className="w-full sm:w-auto bg-slate-400 text-white py-2 rounded-lg hover:bg-slate-500 transition font-medium text-sm"
+                    >
+                      Cancelar Edição
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!selectedSale) return;
+                        // Mapear itens antigos e novos por product_id
+                        const oldItems = selectedSale.sale_items;
+                        const newItems = editedItems;
+                        // 1. Atualizar estoque conforme diferença de quantidade
+                        for (const oldItem of oldItems) {
+                          const newItem = newItems.find(i => i.product_id === oldItem.product_id);
+                          if (newItem) {
+                            const diff = newItem.quantity - oldItem.quantity;
+                            if (diff !== 0) {
+                              // Buscar estoque atual
+                              const { data: product, error: prodError } = await supabase
+                                .from('products')
+                                .select('stock')
+                                .eq('id', oldItem.product_id)
+                                .single();
+                              if (!prodError && product) {
+                                await supabase
+                                  .from('products')
+                                  .update({ stock: product.stock - diff })
+                                  .eq('id', oldItem.product_id);
+                              }
+                            }
+                          } else {
+                            // Item removido: devolver estoque
+                            const { data: product, error: prodError } = await supabase
+                              .from('products')
+                              .select('stock')
+                              .eq('id', oldItem.product_id)
+                              .single();
+                            if (!prodError && product) {
+                              await supabase
+                                .from('products')
+                                .update({ stock: product.stock + oldItem.quantity })
+                                .eq('id', oldItem.product_id);
+                            }
+                          }
+                        }
+                        // Novos itens adicionados
+                        for (const newItem of newItems) {
+                          if (!oldItems.find(i => i.product_id === newItem.product_id)) {
+                            // Buscar estoque atual
+                            const { data: product, error: prodError } = await supabase
+                              .from('products')
+                              .select('stock')
+                              .eq('id', newItem.product_id)
+                              .single();
+                            if (!prodError && product) {
+                              await supabase
+                                .from('products')
+                                .update({ stock: product.stock - newItem.quantity })
+                                .eq('id', newItem.product_id);
+                            }
+                          }
+                        }
+                        // 2. Atualizar itens da venda (deletar todos e inserir novos)
+                        await supabase
+                          .from('sale_items')
+                          .delete()
+                          .eq('sale_id', selectedSale.id);
+                        await supabase
+                          .from('sale_items')
+                          .insert(newItems.map(item => ({
+                            sale_id: selectedSale.id,
+                            product_id: item.product_id,
+                            quantity: item.quantity,
+                            price: item.price,
+                            original_price: item.original_price ?? item.price,
+                            discount: item.discount,
+                            custom_name: item.custom_name ?? null
+                          })));
+                        // 3. Atualizar total da venda
+                        const newTotal = newItems.reduce((sum, item) => sum + (item.price - item.discount) * item.quantity, 0);
+                        await supabase
+                          .from('sales')
+                          .update({ total: newTotal })
+                          .eq('id', selectedSale.id);
+                        alert('Venda atualizada com sucesso!');
+                        setEditMode(false);
+                        fetchAllSales();
+                      }}
+                      className="w-full sm:w-auto bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition font-medium text-sm"
+                    >
+                      Salvar Alterações
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>
