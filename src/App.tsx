@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import './App.css';
+import PDV from './components/PDV';
 import Sidebar from './components/Sidebar';
 import DashboardMetrics from './components/DashboardMetrics';
 import RecentSalesTable from './components/RecentSalesTable';

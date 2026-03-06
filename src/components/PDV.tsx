@@ -1,6 +1,5 @@
 
 import React, { useEffect, useRef, useState } from 'react';
-import { SidebarNameTruncate } from './SidebarContext.tsx';
 import BarcodeScanner from './BarcodeScanner';
 import { FiTrash2 } from 'react-icons/fi';
 import { supabase } from '../supabase';
