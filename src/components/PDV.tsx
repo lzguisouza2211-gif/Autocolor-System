@@ -483,7 +483,7 @@ const PDV: React.FC = () => {
 
   return (
     <div className="w-full h-full p-0 m-0">
-      <div className="w-full h-full grid grid-cols-1 lg:grid-cols-[60%_40%] gap-0 bg-transparent">
+      <div className="w-full h-full grid grid-cols-1 lg:grid-cols-[50%_50%] gap-0 bg-transparent">
         {/* Coluna esquerda: busca e resultados - APENAS DESKTOP */}
         <div className="hidden lg:flex flex-col h-full bg-white p-10">
           <div className="flex items-center justify-between mb-4">
@@ -631,7 +631,7 @@ const PDV: React.FC = () => {
               </div>
             )}
           </div>
-          <div className="flex-1 overflow-y-auto min-h-0">
+            <div className="flex-1 overflow-y-auto min-h-0">
             {/* Cabeçalho - apenas desktop */}
             {cart.length > 0 && (
               <div className="hidden lg:grid grid-cols-[28px_2.4fr_0.8fr_1fr_1.2fr] gap-3 text-xs text-gray-500 uppercase tracking-wide pb-2 border-b">
@@ -653,8 +653,8 @@ const PDV: React.FC = () => {
                     tabIndex={-1}
                   >
                     {/* Layout Desktop */}
-                    <div className="hidden lg:flex items-center gap-3 w-full">
-                      <div className="flex items-center justify-center">
+                    <div className="hidden lg:flex items-center gap-3 w-full whitespace-nowrap overflow-x-auto">
+                      <div className="flex items-center justify-center flex-shrink-0">
                         <button
                           className="p-1.5 rounded-full hover:bg-red-100 text-red-500"
                           onClick={() => removeItem(item.product_id)}
@@ -664,7 +664,7 @@ const PDV: React.FC = () => {
                           <FiTrash2 size={16} />
                         </button>
                       </div>
-                      <div className="flex-1 min-w-0 max-w-none">
+                      <div className="flex-1 min-w-0 max-w-none flex flex-col justify-center">
                         {item.is_customizable ? (
                           <input
                             type="text"
@@ -676,8 +676,8 @@ const PDV: React.FC = () => {
                           />
                         ) : (
                           <>
-                            <div className="font-semibold text-base md:text-lg min-w-0 break-words">{item.name}</div>
-                            <div className="text-xs text-gray-500 flex flex-wrap gap-2 break-words">
+                            <div className="font-semibold text-base md:text-lg min-w-0 truncate">{item.name}</div>
+                            <div className="text-xs text-gray-500 flex flex-wrap gap-2 truncate">
                               {item.category && <span>{item.category}</span>}
                               {item.mark && <span>{item.mark}</span>}
                               {item.type && <span>{item.type}</span>}
@@ -686,7 +686,7 @@ const PDV: React.FC = () => {
                           </>
                         )}
                       </div>
-                      <div className="flex justify-center">
+                      <div className="flex justify-center flex-shrink-0 min-w-[120px]">
                         <div className="flex items-center gap-1 bg-gray-50 rounded-md px-1 py-0.5 border border-gray-200">
                           <button
                             className="w-6 h-6 md:w-7 md:h-7 rounded-md bg-white border text-sm font-semibold flex items-center justify-center"
@@ -716,7 +716,7 @@ const PDV: React.FC = () => {
                           >+</button>
                         </div>
                       </div>
-                      <div className="flex items-center justify-end" style={{ width: '7.5rem' }}>
+                      <div className="flex items-center justify-end flex-shrink-0 min-w-[100px]">
                         <input
                           type="number"
                           min="0"
@@ -733,7 +733,7 @@ const PDV: React.FC = () => {
                           className="w-full text-right text-sm font-medium text-slate-900 border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-200"
                         />
                       </div>
-                      <div className="text-right flex items-center justify-end gap-1">
+                      <div className="text-right flex items-center justify-end gap-1 flex-shrink-0 min-w-[100px]">
                         <span className="text-sm text-gray-500">R$</span>
                         <input
                           type="text"
@@ -860,7 +860,7 @@ const PDV: React.FC = () => {
                 type="number"
                 min="0"
                 step="0.01"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-200"
+                className="w-2/3 border border-gray-300 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-200"
                 placeholder="Digite o valor recebido"
                 value={valorRecebido}
                 onChange={e => setValorRecebido(e.target.value)}
