@@ -654,7 +654,7 @@ const PDV: React.FC = () => {
                     tabIndex={-1}
                   >
                     {/* Layout Desktop */}
-                    <div className="hidden lg:grid grid-cols-[28px_2.4fr_0.8fr_1fr_1.2fr] gap-3 items-center">
+                    <div className="hidden lg:flex items-center gap-3">
                       <div className="flex items-center justify-center">
                         <button
                           className="p-1.5 rounded-full hover:bg-red-100 text-red-500"
@@ -665,7 +665,7 @@ const PDV: React.FC = () => {
                           <FiTrash2 size={16} />
                         </button>
                       </div>
-                      <div className="min-w-0">
+                      <div className="flex-1 min-w-0">
                         {item.is_customizable ? (
                           <input
                             type="text"
@@ -717,7 +717,7 @@ const PDV: React.FC = () => {
                           >+</button>
                         </div>
                       </div>
-                      <div className="text-right flex items-center justify-end">
+                      <div className="flex items-center justify-end" style={{ width: '7.5rem' }}>
                         <input
                           type="number"
                           min="0"
@@ -731,7 +731,7 @@ const PDV: React.FC = () => {
                             }
                           }}
                           disabled={finalizing}
-                          className="w-full text-right text-sm font-medium text-slate-900 border border-gray-200 rounded px-0.2 py-0.2 focus:outline-none focus:ring-1 focus:ring-blue-200"
+                          className="w-full text-right text-sm font-medium text-slate-900 border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-200"
                         />
                       </div>
                       <div className="text-right flex items-center justify-end gap-1">
