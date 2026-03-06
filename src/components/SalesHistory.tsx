@@ -522,7 +522,14 @@ const SalesHistory: React.FC = () => {
                               .single();
                             userData = data;
                           }
-                          setSelectedSale({ ...updatedSale, users: userData });
+                          // Corrigir estrutura de sale_items: garantir que products seja objeto { name: string }
+                          const fixedSaleItems = Array.isArray(updatedSale.sale_items)
+                            ? updatedSale.sale_items.map((item: any) => ({
+                                ...item,
+                                products: Array.isArray(item.products) ? (item.products[0] || { name: '' }) : item.products
+                              }))
+                            : [];
+                          setSelectedSale({ ...updatedSale, users: userData ?? undefined, sale_items: fixedSaleItems });
                         }
                         fetchAllSales();
                       }}
