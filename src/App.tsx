@@ -79,7 +79,7 @@ function App() {
           {tab === 'sales' && (
             <div className="flex flex-row gap-6 fade-in w-full h-full">
               {/* Painel do carrinho (direita) */}
-              <div className="w-full max-w-[600px] min-w-[420px] flex-shrink-0">
+              <div className="w-full max-w-[750px] min-w-[520px] flex-shrink-0">
                 <PDV />
               </div>
               {/* Painel da venda (esquerda) */}
