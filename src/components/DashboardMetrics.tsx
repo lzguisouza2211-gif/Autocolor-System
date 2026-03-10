@@ -48,7 +48,8 @@ const DashboardMetrics: React.FC = () => {
       const { data: salesData } = await supabase
         .from('sales')
         .select('total')
-        .gte('created_at', startOfMonth.toISOString());
+        .gte('created_at', startOfMonth.toISOString())
+        .is('deleted_at', null);
 
       const totalSales = salesData?.reduce((sum, sale) => sum + Number(sale.total), 0) || 0;
 

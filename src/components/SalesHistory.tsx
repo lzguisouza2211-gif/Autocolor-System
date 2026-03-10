@@ -364,10 +364,9 @@ const SalesHistory: React.FC = () => {
                     </button>
                     <button
                       onClick={async () => {
-                        if (!window.confirm('Tem certeza que deseja deletar esta venda? Esta ação não pode ser desfeita.')) return;
+                        if (!window.confirm('Tem certeza que deseja excluir (soft delete) esta venda? O estoque será devolvido.')) return;
                         try {
                           // 1. Devolver estoque dos produtos
-                          // Buscar estoque atual de cada produto antes de atualizar
                           await Promise.all(selectedSale.sale_items.map(async item => {
                             const { data: product, error: prodError } = await supabase
                               .from('products')
@@ -381,20 +380,29 @@ const SalesHistory: React.FC = () => {
                               .eq('id', item.product_id);
                           }));
 
-                          // 2. Deletar a venda
-                          const { error } = await supabase
+                          // 2. Soft delete da venda e registros relacionados
+                          const { error: saleError } = await supabase
                             .from('sales')
-                            .delete()
+                            .update({ deleted_at: new Date().toISOString() })
                             .eq('id', selectedSale.id);
-                          if (error) {
-                            alert('Erro ao deletar venda: ' + error.message);
+                          const { error: itemsError } = await supabase
+                            .from('sale_items')
+                            .update({ deleted_at: new Date().toISOString() })
+                            .eq('sale_id', selectedSale.id);
+                          const { error: auditError } = await supabase
+                            .from('stock_audit')
+                            .update({ deleted_at: new Date().toISOString() })
+                            .eq('sale_id', selectedSale.id);
+
+                          if (saleError || itemsError || auditError) {
+                            alert('Erro ao excluir venda: ' + (saleError?.message || itemsError?.message || auditError?.message));
                             return;
                           }
-                          alert('Venda deletada com sucesso!');
+                          alert('Venda excluída com sucesso!');
                           setShowModal(false);
                           fetchAllSales();
                         } catch (err) {
-                          alert('Erro inesperado ao deletar venda.');
+                          alert('Erro inesperado ao excluir venda.');
                         }
                       }}
                       className="w-full sm:w-auto bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition font-medium text-sm"
