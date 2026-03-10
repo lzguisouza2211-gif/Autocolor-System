@@ -523,60 +523,46 @@ const SalesHistory: React.FC = () => {
                     <button
                       onClick={async () => {
                         if (!selectedSale) return;
-                        // Mapear itens antigos e novos por product_id
                         const oldItems = selectedSale.sale_items;
                         const newItems = editedItems;
-                        // 1. Atualizar estoque conforme diferença de quantidade
-                        for (const oldItem of oldItems) {
-                          const newItem = newItems.find(i => i.product_id === oldItem.product_id);
-                          if (newItem) {
-                            const diff = newItem.quantity - oldItem.quantity;
-                            if (diff !== 0) {
-                              // Buscar estoque atual
-                              const { data: product, error: prodError } = await supabase
-                                .from('products')
-                                .select('stock')
-                                .eq('id', oldItem.product_id)
-                                .single();
-                              if (!prodError && product) {
-                                await supabase
-                                  .from('products')
-                                  .update({ stock: product.stock - diff })
-                                  .eq('id', oldItem.product_id);
-                              }
-                            }
-                          } else {
-                            // Item removido: devolver estoque
+                        // Mapear por product_id para fácil lookup
+                        const oldMap = new Map(oldItems.map(item => [item.product_id, item]));
+                        const newMap = new Map(newItems.map(item => [item.product_id, item]));
+
+                        // 1. Corrigir estoque para todos os produtos afetados
+                        const allProductIds = Array.from(new Set([
+                          ...oldItems.map(i => i.product_id),
+                          ...newItems.map(i => i.product_id)
+                        ]));
+                        for (const productId of allProductIds) {
+                          const oldItem = oldMap.get(productId);
+                          const newItem = newMap.get(productId);
+                          let stockChange = 0;
+                          if (oldItem && newItem) {
+                            // Produto editado: ajustar pela diferença
+                            stockChange = oldItem.quantity - newItem.quantity;
+                          } else if (oldItem && !newItem) {
+                            // Produto removido: devolver tudo
+                            stockChange = oldItem.quantity;
+                          } else if (!oldItem && newItem) {
+                            // Produto novo: tirar do estoque
+                            stockChange = -newItem.quantity;
+                          }
+                          if (stockChange !== 0) {
                             const { data: product, error: prodError } = await supabase
                               .from('products')
                               .select('stock')
-                              .eq('id', oldItem.product_id)
+                              .eq('id', productId)
                               .single();
                             if (!prodError && product) {
                               await supabase
                                 .from('products')
-                                .update({ stock: product.stock + oldItem.quantity })
-                                .eq('id', oldItem.product_id);
+                                .update({ stock: product.stock + stockChange })
+                                .eq('id', productId);
                             }
                           }
                         }
-                        // Novos itens adicionados
-                        for (const newItem of newItems) {
-                          if (!oldItems.find(i => i.product_id === newItem.product_id)) {
-                            // Buscar estoque atual
-                            const { data: product, error: prodError } = await supabase
-                              .from('products')
-                              .select('stock')
-                              .eq('id', newItem.product_id)
-                              .single();
-                            if (!prodError && product) {
-                              await supabase
-                                .from('products')
-                                .update({ stock: product.stock - newItem.quantity })
-                                .eq('id', newItem.product_id);
-                            }
-                          }
-                        }
+
                         // 2. Atualizar itens da venda (deletar todos e inserir novos)
                         await supabase
                           .from('sale_items')
