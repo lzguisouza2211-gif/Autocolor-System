@@ -534,11 +534,10 @@ const SalesHistory: React.FC = () => {
                     <button
                       onClick={async () => {
                         if (!selectedSale) return;
-                        const oldItems = selectedSale.sale_items;
+                        // Removido: oldItems não é mais necessário
                         const newItems = editedItems;
                         // Mapear por product_id para fácil lookup
-                        const oldMap = new Map(oldItems.map(item => [item.product_id, item]));
-                        const newMap = new Map(newItems.map(item => [item.product_id, item]));
+                        // Removido: oldMap e newMap não são mais necessários
 
                         // Removido ajuste manual de estoque: triggers do banco já controlam o estoque corretamente
 
