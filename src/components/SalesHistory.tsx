@@ -82,6 +82,7 @@ const SalesHistory: React.FC = () => {
           products (name)
         )
       `)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
     if (salesData) {
