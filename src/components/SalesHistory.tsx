@@ -366,6 +366,8 @@ const SalesHistory: React.FC = () => {
                       onClick={async () => {
                         if (!window.confirm('Tem certeza que deseja excluir (soft delete) esta venda? O estoque será devolvido.')) return;
                         try {
+                          // Debug: conferir id da venda
+                          console.log('ID da venda para exclusão:', selectedSale?.id);
                           // 1. Devolver estoque dos produtos
                           await Promise.all(selectedSale.sale_items.map(async item => {
                             const { data: product, error: prodError } = await supabase
@@ -394,6 +396,11 @@ const SalesHistory: React.FC = () => {
                             .update({ deleted_at: new Date().toISOString() })
                             .eq('sale_id', selectedSale.id);
 
+                          // Debug: logar erros
+                          console.log('saleError:', saleError);
+                          console.log('itemsError:', itemsError);
+                          console.log('auditError:', auditError);
+
                           if (saleError || itemsError || auditError) {
                             alert('Erro ao excluir venda: ' + (saleError?.message || itemsError?.message || auditError?.message));
                             return;
@@ -403,6 +410,7 @@ const SalesHistory: React.FC = () => {
                           fetchAllSales();
                         } catch (err) {
                           alert('Erro inesperado ao excluir venda.');
+                          console.error('Erro inesperado ao excluir venda:', err);
                         }
                       }}
                       className="w-full sm:w-auto bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition font-medium text-sm"
