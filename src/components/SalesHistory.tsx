@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -23,7 +23,45 @@ interface SaleDetail {
   }>;
 }
 
+interface Product {
+  id: number;
+  name: string;
+  price: number;
+  price_sale?: number;
+  stock: number;
+  barcode?: string;
+  category?: string;
+  mark?: string;
+}
+
 const SalesHistory: React.FC = () => {
+    // Produtos para autocomplete
+    const [products, setProducts] = useState<Product[]>([]);
+    const [productSearch, setProductSearch] = useState('');
+    const [showProductDropdown, setShowProductDropdown] = useState(false);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+      if (!editMode) return;
+      // Carregar produtos ao entrar no modo de edição
+      supabase
+        .from('products')
+        .select('*')
+        .is('deleted_at', null)
+        .then(({ data, error }) => {
+          setProducts(error ? [] : data || []);
+        });
+    }, [editMode]);
+    // Produtos filtrados para busca
+    const filteredProducts = products.filter(p => {
+      const s = productSearch.toLowerCase();
+      return (
+        p.name.toLowerCase().includes(s) ||
+        (p.category || '').toLowerCase().includes(s) ||
+        (p.mark || '').toLowerCase().includes(s) ||
+        (p.barcode || '').toLowerCase().includes(s)
+      );
+    });
   const { user } = useAuth();
   const [sales, setSales] = useState<SaleDetail[]>([]);
   const [loading, setLoading] = useState(true);
@@ -231,60 +269,112 @@ const SalesHistory: React.FC = () => {
                 <h3 className="text-sm font-semibold text-slate-900 mb-3">Itens</h3>
                 <div className="space-y-2 border border-gray-200 rounded-lg p-4">
                   {editMode ? (
-                    editedItems.map((item, idx) => (
-                      <div key={idx} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0 gap-2">
-                        <div className="flex-1">
-                          <input
-                            className="text-sm text-slate-900 border rounded px-2 py-1 w-full mb-1"
-                            value={item.custom_name ?? (item.products?.name || `Produto ${item.product_id}`)}
-                            onChange={e => {
-                              const val = e.target.value;
-                              setEditedItems(items => items.map((it, i) => i === idx ? { ...it, custom_name: val } : it));
-                            }}
-                          />
-                          <div className="flex gap-2 items-center">
-                            <input
-                              type="number"
-                              min={1}
-                              className="w-16 border rounded px-1 py-0.5 text-xs"
-                              value={item.quantity}
-                              onChange={e => {
-                                const val = Math.max(1, Number(e.target.value));
-                                setEditedItems(items => items.map((it, i) => i === idx ? { ...it, quantity: val } : it));
-                              }}
-                            />
-                            <span className="text-xs">x</span>
-                            <input
-                              type="number"
-                              min={0}
-                              step={0.01}
-                              className="w-20 border rounded px-1 py-0.5 text-xs"
-                              value={item.price}
-                              onChange={e => {
-                                const val = Number(e.target.value);
-                                setEditedItems(items => items.map((it, i) => i === idx ? { ...it, price: val } : it));
-                              }}
-                            />
-                            <span className="text-xs">Desconto:</span>
-                            <input
-                              type="number"
-                              min={0}
-                              step={0.01}
-                              className="w-16 border rounded px-1 py-0.5 text-xs"
-                              value={item.discount}
-                              onChange={e => {
-                                const val = Number(e.target.value);
-                                setEditedItems(items => items.map((it, i) => i === idx ? { ...it, discount: val } : it));
-                              }}
-                            />
-                          </div>
-                        </div>
+                    <>
+                      {/* Autocomplete de produtos para adicionar item */}
+                      <div className="mb-3 flex gap-2 items-center">
+                        <input
+                          ref={inputRef}
+                          className="text-sm border rounded px-2 py-1 w-full"
+                          placeholder="Adicionar produto à venda..."
+                          value={productSearch}
+                          onChange={e => {
+                            setProductSearch(e.target.value);
+                            setShowProductDropdown(true);
+                          }}
+                          onFocus={() => setShowProductDropdown(true)}
+                        />
                         <button
-                          className="text-xs text-red-600 hover:underline"
-                          onClick={() => setEditedItems(items => items.filter((_, i) => i !== idx))}
-                        >Remover</button>
+                          className="text-xs bg-blue-600 text-white rounded px-3 py-1 font-medium hover:bg-blue-700"
+                          onClick={() => setShowProductDropdown(v => !v)}
+                          type="button"
+                        >Buscar</button>
                       </div>
-                    ))
+                      {showProductDropdown && productSearch.length > 0 && filteredProducts.length > 0 && (
+                        <div className="absolute z-50 bg-white border border-gray-200 rounded shadow-lg w-full max-h-56 overflow-y-auto">
+                          {filteredProducts.map(prod => (
+                            <div
+                              key={prod.id}
+                              className="px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm flex justify-between items-center"
+                              onClick={() => {
+                                setEditedItems(items => [
+                                  ...items,
+                                  {
+                                    product_id: prod.id,
+                                    quantity: 1,
+                                    price: prod.price_sale ?? prod.price,
+                                    original_price: prod.price_sale ?? prod.price,
+                                    discount: 0,
+                                    custom_name: prod.name,
+                                    products: { name: prod.name }
+                                  }
+                                ]);
+                                setProductSearch('');
+                                setShowProductDropdown(false);
+                                inputRef.current?.focus();
+                              }}
+                            >
+                              <span>{prod.name}</span>
+                              <span className="text-xs text-gray-400 ml-2">Est: {prod.stock}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {/* Lista de itens editáveis */}
+                      {editedItems.map((item, idx) => (
+                        <div key={idx} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0 gap-2">
+                          <div className="flex-1">
+                            <input
+                              className="text-sm text-slate-900 border rounded px-2 py-1 w-full mb-1"
+                              value={item.custom_name ?? (item.products?.name || `Produto ${item.product_id}`)}
+                              onChange={e => {
+                                const val = e.target.value;
+                                setEditedItems(items => items.map((it, i) => i === idx ? { ...it, custom_name: val } : it));
+                              }}
+                            />
+                            <div className="flex gap-2 items-center">
+                              <input
+                                type="number"
+                                min={1}
+                                className="w-16 border rounded px-1 py-0.5 text-xs"
+                                value={item.quantity}
+                                onChange={e => {
+                                  const val = Math.max(1, Number(e.target.value));
+                                  setEditedItems(items => items.map((it, i) => i === idx ? { ...it, quantity: val } : it));
+                                }}
+                              />
+                              <span className="text-xs">x</span>
+                              <input
+                                type="number"
+                                min={0}
+                                step={0.01}
+                                className="w-20 border rounded px-1 py-0.5 text-xs"
+                                value={item.price}
+                                onChange={e => {
+                                  const val = Number(e.target.value);
+                                  setEditedItems(items => items.map((it, i) => i === idx ? { ...it, price: val } : it));
+                                }}
+                              />
+                              <span className="text-xs">Desconto:</span>
+                              <input
+                                type="number"
+                                min={0}
+                                step={0.01}
+                                className="w-16 border rounded px-1 py-0.5 text-xs"
+                                value={item.discount}
+                                onChange={e => {
+                                  const val = Number(e.target.value);
+                                  setEditedItems(items => items.map((it, i) => i === idx ? { ...it, discount: val } : it));
+                                }}
+                              />
+                            </div>
+                          </div>
+                          <button
+                            className="text-xs text-red-600 hover:underline"
+                            onClick={() => setEditedItems(items => items.filter((_, i) => i !== idx))}
+                          >Remover</button>
+                        </div>
+                      ))}
+                    </>
                   ) : (
                     selectedSale.sale_items.map((item, idx) => (
                       <div key={idx} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
