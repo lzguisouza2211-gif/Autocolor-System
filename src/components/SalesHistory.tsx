@@ -299,18 +299,29 @@ const SalesHistory: React.FC = () => {
                               key={prod.id}
                               className="px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm flex justify-between items-center"
                               onClick={() => {
-                                setEditedItems(items => [
-                                  ...items,
-                                  {
-                                    product_id: prod.id,
-                                    quantity: 1,
-                                    price: prod.price_sale ?? prod.price,
-                                    original_price: prod.price_sale ?? prod.price,
-                                    discount: 0,
-                                    custom_name: prod.name,
-                                    products: { name: prod.name }
+                                setEditedItems(items => {
+                                  const idx = items.findIndex(it => it.product_id === prod.id);
+                                  if (idx !== -1) {
+                                    // Se já existe, incrementa a quantidade
+                                    return items.map((it, i) =>
+                                      i === idx ? { ...it, quantity: it.quantity + 1 } : it
+                                    );
+                                  } else {
+                                    // Se não existe, adiciona novo
+                                    return [
+                                      ...items,
+                                      {
+                                        product_id: prod.id,
+                                        quantity: 1,
+                                        price: prod.price_sale ?? prod.price,
+                                        original_price: prod.price_sale ?? prod.price,
+                                        discount: 0,
+                                        custom_name: prod.name,
+                                        products: { name: prod.name }
+                                      }
+                                    ];
                                   }
-                                ]);
+                                });
                                 setProductSearch('');
                                 setShowProductDropdown(false);
                                 inputRef.current?.focus();
