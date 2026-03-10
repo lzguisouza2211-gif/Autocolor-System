@@ -41,6 +41,16 @@ const SalesHistory: React.FC = () => {
     const [showProductDropdown, setShowProductDropdown] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
+    // Estados principais
+    const { user } = useAuth();
+    const [sales, setSales] = useState<SaleDetail[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [isAdmin, setIsAdmin] = useState(false);
+    const [selectedSale, setSelectedSale] = useState<SaleDetail | null>(null);
+    const [showModal, setShowModal] = useState(false);
+    const [editMode, setEditMode] = useState(false);
+    const [editedItems, setEditedItems] = useState<any[]>([]);
+
     useEffect(() => {
       if (!editMode) return;
       // Carregar produtos ao entrar no modo de edição
@@ -62,14 +72,7 @@ const SalesHistory: React.FC = () => {
         (p.barcode || '').toLowerCase().includes(s)
       );
     });
-  const { user } = useAuth();
-  const [sales, setSales] = useState<SaleDetail[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [selectedSale, setSelectedSale] = useState<SaleDetail | null>(null);
-  const [showModal, setShowModal] = useState(false);
-  const [editMode, setEditMode] = useState(false);
-  const [editedItems, setEditedItems] = useState<any[]>([]);
+  // (Removido: já declarado acima para evitar redeclaração)
 
   useEffect(() => {
     if (!user) return;
