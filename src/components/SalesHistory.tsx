@@ -540,39 +540,7 @@ const SalesHistory: React.FC = () => {
                         const oldMap = new Map(oldItems.map(item => [item.product_id, item]));
                         const newMap = new Map(newItems.map(item => [item.product_id, item]));
 
-                        // 1. Corrigir estoque para todos os produtos afetados
-                        const allProductIds = Array.from(new Set([
-                          ...oldItems.map(i => i.product_id),
-                          ...newItems.map(i => i.product_id)
-                        ]));
-                        for (const productId of allProductIds) {
-                          const oldItem = oldMap.get(productId);
-                          const newItem = newMap.get(productId);
-                          let stockChange = 0;
-                          if (oldItem && newItem) {
-                            // Produto editado: ajustar pela diferença
-                            stockChange = oldItem.quantity - newItem.quantity;
-                          } else if (oldItem && !newItem) {
-                            // Produto removido: devolver tudo
-                            stockChange = oldItem.quantity;
-                          } else if (!oldItem && newItem) {
-                            // Produto novo: tirar do estoque
-                            stockChange = -newItem.quantity;
-                          }
-                          if (stockChange !== 0) {
-                            const { data: product, error: prodError } = await supabase
-                              .from('products')
-                              .select('stock')
-                              .eq('id', productId)
-                              .single();
-                            if (!prodError && product) {
-                              await supabase
-                                .from('products')
-                                .update({ stock: product.stock + stockChange })
-                                .eq('id', productId);
-                            }
-                          }
-                        }
+                        // Removido ajuste manual de estoque: triggers do banco já controlam o estoque corretamente
 
                         // 2. Atualizar itens da venda (deletar todos e inserir novos)
                         await supabase
