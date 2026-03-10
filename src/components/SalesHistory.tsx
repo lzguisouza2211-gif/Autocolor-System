@@ -285,7 +285,7 @@ const SalesHistory: React.FC = () => {
                             setShowProductDropdown(true);
                           }}
                           onFocus={() => setShowProductDropdown(true)}
-                          onBlur={e => {
+                          onBlur={() => {
                             // Fecha dropdown ao perder foco, exceto se for clicar no dropdown
                             setTimeout(() => setShowProductDropdown(false), 120);
                           }}
