@@ -285,6 +285,10 @@ const SalesHistory: React.FC = () => {
                             setShowProductDropdown(true);
                           }}
                           onFocus={() => setShowProductDropdown(true)}
+                          onBlur={e => {
+                            // Fecha dropdown ao perder foco, exceto se for clicar no dropdown
+                            setTimeout(() => setShowProductDropdown(false), 120);
+                          }}
                         />
                         <button
                           className="text-xs bg-blue-600 text-white rounded px-3 py-1 font-medium hover:bg-blue-700"
@@ -293,21 +297,23 @@ const SalesHistory: React.FC = () => {
                         >Buscar</button>
                       </div>
                       {showProductDropdown && productSearch.length > 0 && filteredProducts.length > 0 && (
-                        <div className="absolute z-50 bg-white border border-gray-200 rounded shadow-lg w-full max-h-56 overflow-y-auto">
+                        <div
+                          className="absolute left-0 right-0 top-full mt-1 z-[99999] bg-white border border-gray-300 rounded-lg shadow-2xl w-full max-h-60 overflow-y-auto"
+                          style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}
+                          tabIndex={-1}
+                        >
                           {filteredProducts.map(prod => (
                             <div
                               key={prod.id}
-                              className="px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm flex justify-between items-center"
+                              className="px-3 py-2 hover:bg-blue-100 cursor-pointer text-sm flex justify-between items-center transition-colors"
                               onClick={() => {
                                 setEditedItems(items => {
                                   const idx = items.findIndex(it => it.product_id === prod.id);
                                   if (idx !== -1) {
-                                    // Se já existe, incrementa a quantidade
                                     return items.map((it, i) =>
                                       i === idx ? { ...it, quantity: it.quantity + 1 } : it
                                     );
                                   } else {
-                                    // Se não existe, adiciona novo
                                     return [
                                       ...items,
                                       {
