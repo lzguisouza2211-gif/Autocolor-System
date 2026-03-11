@@ -513,7 +513,6 @@ const SalesHistory: React.FC = () => {
                               company: { name: 'AutoColor' }
                             })
                           });
-                          alert('Pedido enviado para impressão!');
                         } catch (err) {
                           alert('Erro ao imprimir pedido. Verifique o servidor de impressão.');
                         }
@@ -589,7 +588,7 @@ const SalesHistory: React.FC = () => {
                                         setDeleteLoading(false);
                                         return;
                                       }
-                                      alert('Venda excluída com sucesso!');
+                                      // alert('Venda excluída com sucesso!');
                                       setShowModal(false);
                                       setShowDeleteConfirm(false);
                                       fetchAllSales();
@@ -647,7 +646,7 @@ const SalesHistory: React.FC = () => {
                           .from('sales')
                           .update({ total: newTotal })
                           .eq('id', selectedSale.id);
-                        alert('Venda atualizada com sucesso!');
+                        // alert('Venda atualizada com sucesso!');
                         setEditMode(false);
                         // Atualizar a venda selecionada no modal e na lista
                         const { data: updatedSale } = await supabase
