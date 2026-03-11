@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -35,6 +37,9 @@ interface Product {
 }
 
 const SalesHistory: React.FC = () => {
+      // Modal de confirmação de exclusão
+      const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+      const [deleteLoading, setDeleteLoading] = useState(false);
     // Produtos para autocomplete
     const [products, setProducts] = useState<Product[]>([]);
     const [productSearch, setProductSearch] = useState('');
@@ -530,60 +535,76 @@ const SalesHistory: React.FC = () => {
                       Editar Venda
                     </button>
                     <button
-                      onClick={async () => {
-                        if (!window.confirm('Tem certeza que deseja excluir (soft delete) esta venda? O estoque será devolvido.')) return;
-                        try {
-                          // Debug: conferir id da venda
-                          console.log('ID da venda para exclusão:', selectedSale?.id);
-                          // 1. Devolver estoque dos produtos
-                          await Promise.all(selectedSale.sale_items.map(async item => {
-                            const { data: product, error: prodError } = await supabase
-                              .from('products')
-                              .select('stock')
-                              .eq('id', item.product_id)
-                              .single();
-                            if (prodError || !product) return;
-                            return supabase
-                              .from('products')
-                              .update({ stock: product.stock + item.quantity })
-                              .eq('id', item.product_id);
-                          }));
-
-                          // 2. Soft delete da venda e registros relacionados
-                          const { error: saleError } = await supabase
-                            .from('sales')
-                            .update({ deleted_at: new Date().toISOString() })
-                            .eq('id', selectedSale.id);
-                          const { error: itemsError } = await supabase
-                            .from('sale_items')
-                            .update({ deleted_at: new Date().toISOString() })
-                            .eq('sale_id', selectedSale.id);
-                          const { error: auditError } = await supabase
-                            .from('stock_audit')
-                            .update({ deleted_at: new Date().toISOString() })
-                            .eq('sale_id', selectedSale.id);
-
-                          // Debug: logar erros
-                          console.log('saleError:', saleError);
-                          console.log('itemsError:', itemsError);
-                          console.log('auditError:', auditError);
-
-                          if (saleError || itemsError || auditError) {
-                            alert('Erro ao excluir venda: ' + (saleError?.message || itemsError?.message || auditError?.message));
-                            return;
-                          }
-                          alert('Venda excluída com sucesso!');
-                          setShowModal(false);
-                          fetchAllSales();
-                        } catch (err) {
-                          alert('Erro inesperado ao excluir venda.');
-                          console.error('Erro inesperado ao excluir venda:', err);
-                        }
-                      }}
+                      onClick={() => setShowDeleteConfirm(true)}
                       className="w-full sm:w-auto bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition font-medium text-sm"
                     >
                       Deletar Venda
                     </button>
+                        {/* Modal de confirmação de exclusão */}
+                        {showDeleteConfirm && (
+                          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[10000]">
+                            <div className="bg-white rounded-xl shadow-lg p-8 max-w-sm w-full text-center">
+                              <h3 className="text-lg font-semibold text-slate-900 mb-2">Confirmar exclusão</h3>
+                              <p className="text-slate-600 mb-6">Tem certeza que deseja excluir (soft delete) esta venda? O estoque será devolvido.</p>
+                              <div className="flex gap-2 justify-center">
+                                <button
+                                  className="bg-slate-400 text-white px-4 py-2 rounded hover:bg-slate-500 font-medium"
+                                  onClick={() => setShowDeleteConfirm(false)}
+                                  disabled={deleteLoading}
+                                >Cancelar</button>
+                                <button
+                                  className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 font-medium"
+                                  onClick={async () => {
+                                    if (!selectedSale) return;
+                                    setDeleteLoading(true);
+                                    try {
+                                      // 1. Devolver estoque dos produtos
+                                      await Promise.all(selectedSale.sale_items.map(async item => {
+                                        const { data: product, error: prodError } = await supabase
+                                          .from('products')
+                                          .select('stock')
+                                          .eq('id', item.product_id)
+                                          .single();
+                                        if (prodError || !product) return;
+                                        return supabase
+                                          .from('products')
+                                          .update({ stock: product.stock + item.quantity })
+                                          .eq('id', item.product_id);
+                                      }));
+                                      // 2. Soft delete da venda e registros relacionados
+                                      const { error: saleError } = await supabase
+                                        .from('sales')
+                                        .update({ deleted_at: new Date().toISOString() })
+                                        .eq('id', selectedSale.id);
+                                      const { error: itemsError } = await supabase
+                                        .from('sale_items')
+                                        .update({ deleted_at: new Date().toISOString() })
+                                        .eq('sale_id', selectedSale.id);
+                                      const { error: auditError } = await supabase
+                                        .from('stock_audit')
+                                        .update({ deleted_at: new Date().toISOString() })
+                                        .eq('sale_id', selectedSale.id);
+                                      if (saleError || itemsError || auditError) {
+                                        alert('Erro ao excluir venda: ' + (saleError?.message || itemsError?.message || auditError?.message));
+                                        setDeleteLoading(false);
+                                        return;
+                                      }
+                                      alert('Venda excluída com sucesso!');
+                                      setShowModal(false);
+                                      setShowDeleteConfirm(false);
+                                      fetchAllSales();
+                                    } catch (err) {
+                                      alert('Erro inesperado ao excluir venda.');
+                                      console.error('Erro inesperado ao excluir venda:', err);
+                                    }
+                                    setDeleteLoading(false);
+                                  }}
+                                  disabled={deleteLoading}
+                                >{deleteLoading ? 'Excluindo...' : 'Excluir'}</button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                   </>
                 )}
                 {editMode && (
