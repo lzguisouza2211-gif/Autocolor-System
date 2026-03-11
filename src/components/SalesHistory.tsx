@@ -59,6 +59,11 @@ const SalesHistory: React.FC = () => {
         .select('*')
         .is('deleted_at', null)
         .then(({ data, error }) => {
+          if (error) {
+            console.error('Erro ao buscar produtos:', error);
+          } else {
+            console.log('Produtos carregados:', data);
+          }
           setProducts(error ? [] : data || []);
         });
     }, [editMode]);
@@ -274,7 +279,7 @@ const SalesHistory: React.FC = () => {
                   {editMode ? (
                     <>
                       {/* Autocomplete de produtos para adicionar item */}
-                      <div className="mb-3 flex gap-2 items-center">
+                      <div className="mb-3 flex gap-2 items-center relative" style={{ position: 'relative' }}>
                         <input
                           ref={inputRef}
                           className="text-sm border rounded px-2 py-1 w-full"
@@ -295,48 +300,100 @@ const SalesHistory: React.FC = () => {
                           onClick={() => setShowProductDropdown(v => !v)}
                           type="button"
                         >Buscar</button>
+                        {showProductDropdown && productSearch.length > 0 && (
+                          <div
+                            className="absolute left-0 right-0 top-full mt-1 z-[99999] bg-white border border-gray-300 rounded-lg shadow-2xl w-full max-h-60 overflow-y-auto"
+                            style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.18)', zIndex: 99999 }}
+                            tabIndex={-1}
+                          >
+                            {filteredProducts.length > 0 ? (
+                              filteredProducts.map(prod => (
+                                <div
+                                  key={prod.id}
+                                  className="px-3 py-2 hover:bg-blue-100 cursor-pointer text-sm flex justify-between items-center transition-colors"
+                                  onMouseDown={e => e.preventDefault()}
+                                  onClick={() => {
+                                    setEditedItems(items => {
+                                      const idx = items.findIndex(it => it.product_id === prod.id);
+                                      if (idx !== -1) {
+                                        return items.map((it, i) =>
+                                          i === idx ? { ...it, quantity: it.quantity + 1 } : it
+                                        );
+                                      } else {
+                                        return [
+                                          ...items,
+                                          {
+                                            product_id: prod.id,
+                                            quantity: 1,
+                                            price: prod.price_sale ?? prod.price,
+                                            original_price: prod.price_sale ?? prod.price,
+                                            discount: 0,
+                                            custom_name: prod.name,
+                                            products: { name: prod.name }
+                                          }
+                                        ];
+                                      }
+                                    });
+                                    setProductSearch('');
+                                    setShowProductDropdown(false);
+                                    inputRef.current?.focus();
+                                  }}
+                                >
+                                  <span>{prod.name}</span>
+                                  <span className="text-xs text-gray-400 ml-2">Est: {prod.stock}</span>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="px-3 py-2 text-sm text-slate-400">Nenhum produto encontrado</div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      {showProductDropdown && productSearch.length > 0 && filteredProducts.length > 0 && (
+                      {showProductDropdown && productSearch.length > 0 && (
                         <div
                           className="absolute left-0 right-0 top-full mt-1 z-[99999] bg-white border border-gray-300 rounded-lg shadow-2xl w-full max-h-60 overflow-y-auto"
                           style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}
                           tabIndex={-1}
                         >
-                          {filteredProducts.map(prod => (
-                            <div
-                              key={prod.id}
-                              className="px-3 py-2 hover:bg-blue-100 cursor-pointer text-sm flex justify-between items-center transition-colors"
-                              onClick={() => {
-                                setEditedItems(items => {
-                                  const idx = items.findIndex(it => it.product_id === prod.id);
-                                  if (idx !== -1) {
-                                    return items.map((it, i) =>
-                                      i === idx ? { ...it, quantity: it.quantity + 1 } : it
-                                    );
-                                  } else {
-                                    return [
-                                      ...items,
-                                      {
-                                        product_id: prod.id,
-                                        quantity: 1,
-                                        price: prod.price_sale ?? prod.price,
-                                        original_price: prod.price_sale ?? prod.price,
-                                        discount: 0,
-                                        custom_name: prod.name,
-                                        products: { name: prod.name }
-                                      }
-                                    ];
-                                  }
-                                });
-                                setProductSearch('');
-                                setShowProductDropdown(false);
-                                inputRef.current?.focus();
-                              }}
-                            >
-                              <span>{prod.name}</span>
-                              <span className="text-xs text-gray-400 ml-2">Est: {prod.stock}</span>
-                            </div>
-                          ))}
+                          {filteredProducts.length > 0 ? (
+                            filteredProducts.map(prod => (
+                              <div
+                                key={prod.id}
+                                className="px-3 py-2 hover:bg-blue-100 cursor-pointer text-sm flex justify-between items-center transition-colors"
+                                onClick={() => {
+                                  setEditedItems(items => {
+                                    const idx = items.findIndex(it => it.product_id === prod.id);
+                                    if (idx !== -1) {
+                                      return items.map((it, i) =>
+                                        i === idx ? { ...it, quantity: it.quantity + 1 } : it
+                                      );
+                                    } else {
+                                      return [
+                                        ...items,
+                                        {
+                                          product_id: prod.id,
+                                          quantity: 1,
+                                          price: prod.price_sale ?? prod.price,
+                                          original_price: prod.price_sale ?? prod.price,
+                                          discount: 0,
+                                          custom_name: prod.name,
+                                          products: { name: prod.name }
+                                        }
+                                      ];
+                                    }
+                                  });
+                                  setProductSearch('');
+                                  setShowProductDropdown(false);
+                                  inputRef.current?.focus();
+                                }}
+                              >
+                                <span>{prod.name}</span>
+                                <span className="text-xs text-gray-400 ml-2">Est: {prod.stock}</span>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="px-3 py-2 text-sm text-slate-400">Nenhum produto encontrado</div>
+                          )}
                         </div>
                       )}
                       {/* Lista de itens editáveis */}
