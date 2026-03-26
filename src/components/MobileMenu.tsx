@@ -43,6 +43,18 @@ const MobileMenu: React.FC = () => {
             <Icon icon="solar:cart-large-minimalistic-linear" width={24} />
             <span className="text-xs font-medium">Vendas (PDV)</span>
           </NavLink>
+
+          <NavLink
+            to="/impostos"
+            className={({ isActive }) =>
+              `flex flex-col items-center justify-center w-full h-full gap-1 ${
+                isActive ? 'text-slate-900 border-t-2 border-slate-900' : 'text-slate-400'
+              } transition-colors`
+            }
+          >
+            <Icon icon="solar:document-text-linear" width={24} />
+            <span className="text-xs font-medium">Impostos</span>
+          </NavLink>
         </div>
       </nav>
 

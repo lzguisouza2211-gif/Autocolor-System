@@ -10,6 +10,7 @@ const navItems = [
   { to: '/visao-geral', icon: 'solar:widget-2-linear', label: 'Dashboard' },
   { to: '/produtos', icon: 'solar:box-linear', label: 'Produtos' },
   { to: '/vendas', icon: 'solar:cart-large-minimalistic-linear', label: 'Vendas' },
+  { to: '/impostos', icon: 'solar:document-text-linear', label: 'Impostos' },
   // { to: '/clientes', icon: 'solar:users-group-two-rounded-linear', label: 'Clientes' },
   // { to: '/relatorios', icon: 'solar:chart-2-linear', label: 'Relatórios' },
 ];

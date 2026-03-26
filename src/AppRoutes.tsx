@@ -9,6 +9,7 @@ import Login from './components/Login';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import PDV from './components/PDV';
 import SalesHistory from './components/SalesHistory';
+import ImpostosDashboard from './components/ImpostosDashboard';
 import './App.css';
 
 function VisaoGeral() {
@@ -31,6 +32,20 @@ function VisaoGeral() {
 
 function Produtos() {
   return <ProductsTable />;
+}
+
+function ImpostosPage() {
+  return (
+    <div className="space-y-4 sm:space-y-6 fade-in">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
+        <div>
+          <h1 className="text-lg sm:text-xl font-medium tracking-tight text-slate-900">Impostos do Processo</h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">Dashboard de Impostos</p>
+        </div>
+      </div>
+      <ImpostosDashboard />
+    </div>
+  );
 }
 // Componente para proteger rotas
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -133,6 +148,16 @@ function App() {
               <ProtectedRoute>
                 <MainLayout>
                   <SalesHistory />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/impostos"
+            element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <ImpostosPage />
                 </MainLayout>
               </ProtectedRoute>
             }
