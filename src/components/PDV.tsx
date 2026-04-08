@@ -35,6 +35,13 @@ interface CartItem {
   is_customizable?: boolean;
 }
 
+interface CustomerOption {
+  id: number;
+  full_name: string;
+  cpf: string;
+  phone: string | null;
+}
+
 const PDV: React.FC = () => {
   // Estado para abrir/fechar o carrinho (sidebar)
   const [cartOpen, setCartOpen] = useState(false);
@@ -58,19 +65,16 @@ const PDV: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [saleId, setSaleId] = useState<number | null>(null);
   const [cartLoaded, setCartLoaded] = useState(false);
+  const [customers, setCustomers] = useState<CustomerOption[]>([]);
+  const [selectedCustomer, setSelectedCustomer] = useState<CustomerOption | null>(null);
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
 
   // Cálculo de totais (deve vir antes de hooks que dependem deles)
   const total = React.useMemo(() => cart.reduce((sum, item) => sum + item.subtotal, 0), [cart]);
   const desconto = React.useMemo(() => cart.reduce((sum, item) => sum + (item.discount * item.quantity), 0), [cart]);
   const subtotal = total + desconto;
-
-  // Troco
-  const [valorRecebido, setValorRecebido] = useState('');
-  const troco = React.useMemo(() => {
-    const recebido = parseFloat(valorRecebido.replace(',', '.'));
-    if (isNaN(recebido)) return 0;
-    return recebido - total;
-  }, [valorRecebido, total]);
 
   const inputRef = useRef<HTMLInputElement>(null);
   // Filtrar produtos localmente (mesma lógica da rota /produtos)
@@ -85,6 +89,20 @@ const PDV: React.FC = () => {
       );
     })
     .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
+  const filteredCustomers = customers
+    .filter((customer) => {
+      const selectedLabel = selectedCustomer
+        ? `${selectedCustomer.full_name} - ${selectedCustomer.cpf}`.toLowerCase()
+        : '';
+      const rawTerm = customerSearch.trim().toLowerCase();
+      const term = selectedCustomer && rawTerm === selectedLabel ? '' : rawTerm;
+      return (
+        customer.full_name.toLowerCase().includes(term) ||
+        customer.cpf.toLowerCase().includes(term) ||
+        (customer.phone ?? '').toLowerCase().includes(term)
+      );
+    })
+    .slice(0, 12);
   // Estado para navegação por teclado no carrinho
   const [selectedCartIndex, setSelectedCartIndex] = useState<number>(-1);
   // Estado para navegação por teclado na lista de produtos filtrados
@@ -199,6 +217,22 @@ const PDV: React.FC = () => {
       .then(({ data, error }) => {
         setProducts(error ? [] : data || []);
         setLoading(false);
+      });
+
+    // Carregar clientes para vincular na venda
+    setLoadingCustomers(true);
+    supabase
+      .from('customers')
+      .select('id, full_name, cpf, phone')
+      .order('full_name', { ascending: true })
+      .then(({ data, error }) => {
+        if (error) {
+          console.error('Erro ao carregar clientes no PDV:', error);
+          setCustomers([]);
+        } else {
+          setCustomers((data || []) as CustomerOption[]);
+        }
+        setLoadingCustomers(false);
       });
   }, []);
 
@@ -392,8 +426,7 @@ const PDV: React.FC = () => {
       setError('Usuário não autenticado');
       return;
     }
-    // Permitir finalizar mesmo sem valor recebido
-    // Se informado, pode calcular troco normalmente, mas não bloquear
+    // Finalização direta da venda
     setFinalizing(true);
     setError(null);
     setSuccess(null);
@@ -401,7 +434,7 @@ const PDV: React.FC = () => {
       // 1. Inserir sale
       const { data: sale, error: saleError } = await supabase
         .from('sales')
-        .insert([{ total, user_id: user.id }])
+        .insert([{ total, user_id: user.id, customer_id: selectedCustomer?.id ?? null }])
         .select('id')
         .single();
       
@@ -453,7 +486,9 @@ const PDV: React.FC = () => {
       setSaleId(sale.id);
       setSuccess(`Pedido #${sale.id} registrado com sucesso!`);
       setCart([]);
-      setValorRecebido('');
+      setSelectedCustomer(null);
+      setCustomerSearch('');
+      setShowCustomerDropdown(false);
       localStorage.removeItem('pdv_cart');
         // Chamar endpoint de impressão
         try {
@@ -906,28 +941,75 @@ const PDV: React.FC = () => {
             </div>
             {error && <div className="text-red-600 text-center mt-2">{error}</div>}
             {success && <div className="text-green-600 text-center mt-2">{success}</div>}
-            {/* Campo para valor recebido e cálculo do troco */}
-            <div className="flex flex-col gap-2 mt-2">
-              <label htmlFor="valor-recebido" className="text-sm text-gray-600">Valor recebido</label>
+            <div className="flex flex-col gap-2 mt-2 relative">
+              <label className="text-sm text-gray-600">Cliente da venda</label>
               <input
-                id="valor-recebido"
-                type="number"
-                min="0"
-                step="0.01"
-                className="w-2/3 border border-gray-300 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-200"
-                placeholder="Digite o valor recebido"
-                value={valorRecebido}
-                onChange={e => setValorRecebido(e.target.value)}
-                disabled={finalizing || cart.length === 0}
+                type="text"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-200"
+                placeholder="Buscar cliente por nome, CPF ou telefone..."
+                value={customerSearch}
+                onChange={(e) => {
+                  setCustomerSearch(e.target.value);
+                  setShowCustomerDropdown(true);
+                }}
+                onFocus={() => setShowCustomerDropdown(true)}
+                onBlur={() => {
+                  setTimeout(() => setShowCustomerDropdown(false), 120);
+                }}
+                disabled={finalizing || loadingCustomers}
               />
-              <div className="flex justify-between items-center text-base font-semibold mt-1">
-                <span>Troco</span>
-                {valorRecebido.trim() !== '' && (
-                  <span className={troco < 0 ? 'text-red-600' : 'text-green-600'}>
-                    R$ {troco.toFixed(2)}
-                  </span>
-                )}
-              </div>
+              {showCustomerDropdown && (
+                <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 max-h-52 overflow-y-auto">
+                  {loadingCustomers ? (
+                    <div className="px-3 py-3 text-sm text-slate-400">Carregando clientes...</div>
+                  ) : filteredCustomers.length > 0 ? (
+                    filteredCustomers.map((customer) => (
+                      <button
+                        key={customer.id}
+                        type="button"
+                        className="w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => {
+                          setSelectedCustomer(customer);
+                          setCustomerSearch(`${customer.full_name} - ${customer.cpf}`);
+                          setShowCustomerDropdown(false);
+                        }}
+                      >
+                        <p className="text-sm font-medium text-slate-900">{customer.full_name}</p>
+                        <p className="text-xs text-slate-500">
+                          {customer.cpf}
+                          {customer.phone ? ` - ${customer.phone}` : ''}
+                        </p>
+                      </button>
+                    ))
+                  ) : customers.length === 0 ? (
+                    <div className="px-3 py-3 text-sm text-slate-400">Nenhum cliente cadastrado.</div>
+                  ) : (
+                    <div className="px-3 py-3 text-sm text-slate-400">Nenhum cliente encontrado.</div>
+                  )}
+                </div>
+              )}
+              {selectedCustomer && (
+                <div className="mt-1 flex items-center justify-between gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-slate-900 truncate">{selectedCustomer.full_name}</p>
+                    <p className="text-xs text-slate-500">
+                      {selectedCustomer.cpf}
+                      {selectedCustomer.phone ? ` - ${selectedCustomer.phone}` : ''}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="text-xs text-red-500 hover:text-red-700"
+                    onClick={() => {
+                      setSelectedCustomer(null);
+                      setCustomerSearch('');
+                    }}
+                  >
+                    Remover
+                  </button>
+                </div>
+              )}
             </div>
             <button
               className="w-full bg-slate-900 text-white text-base font-semibold rounded-lg py-3 mt-4 shadow hover:bg-slate-800 transition"
@@ -946,3 +1028,4 @@ const PDV: React.FC = () => {
 };
 
 export default PDV;
+

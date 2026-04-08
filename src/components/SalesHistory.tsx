@@ -8,10 +8,16 @@ interface SaleDetail {
   id: number;
   total: number;
   created_at: string;
+  customer_id?: number | null;
   users?: {
     name: string | null;
     email: string;
   };
+  customers?: {
+    full_name: string;
+    cpf: string;
+    phone: string | null;
+  } | null;
   sale_items: Array<{
     product_id: number;
     quantity: number;
@@ -123,6 +129,7 @@ const SalesHistory: React.FC = () => {
         total, 
         created_at,
         user_id,
+        customer_id,
         sale_items!fk_sale_items_sale_id (
           product_id, 
           quantity, 
@@ -140,15 +147,28 @@ const SalesHistory: React.FC = () => {
       // Buscar informações dos usuários manualmente
       const salesWithUsers = await Promise.all(
         salesData.map(async (sale) => {
+          let userData = null;
+          let customerData = null;
+
           if (sale.user_id) {
-            const { data: userData } = await supabase
+            const { data } = await supabase
               .from('users')
               .select('name, email')
               .eq('id', sale.user_id)
               .single();
-            return { ...sale, users: userData };
+            userData = data;
           }
-          return { ...sale, users: null };
+
+          if (sale.customer_id) {
+            const { data } = await supabase
+              .from('customers')
+              .select('full_name, cpf, phone')
+              .eq('id', sale.customer_id)
+              .maybeSingle();
+            customerData = data ?? null;
+          }
+
+          return { ...sale, users: userData, customers: customerData };
         })
       );
       setSales(salesWithUsers as any);
@@ -208,6 +228,7 @@ const SalesHistory: React.FC = () => {
                 <tr>
                   <th className="px-4 py-3 tracking-wider">ID</th>
                   <th className="px-4 py-3 tracking-wider">Data</th>
+                  <th className="px-4 py-3 tracking-wider">Cliente</th>
                   <th className="px-4 py-3 tracking-wider text-right">Total</th>
                   <th className="px-4 py-3 tracking-wider text-center">Ações</th>
                 </tr>
@@ -219,6 +240,9 @@ const SalesHistory: React.FC = () => {
                     <td className="px-4 py-3 text-sm text-slate-600">
                       {new Date(sale.created_at).toLocaleDateString('pt-BR')} {' '}
                       <span className="text-xs text-gray-400">{new Date(sale.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-600">
+                      {sale.customers?.full_name || 'Não informado'}
                     </td>
                     <td className="px-4 py-3 text-right text-sm font-semibold text-slate-900">
                       R$ {parseFloat(sale.total.toString()).toFixed(2)}
@@ -273,6 +297,18 @@ const SalesHistory: React.FC = () => {
                   </p>
                   {selectedSale.users?.name && (
                     <p className="text-xs text-slate-400">{selectedSale.users.email}</p>
+                  )}
+                </div>
+                <div className="col-span-2">
+                  <p className="text-xs text-slate-500 mb-1">Cliente</p>
+                  <p className="text-sm font-semibold text-slate-900">
+                    {selectedSale.customers?.full_name || 'Não informado'}
+                  </p>
+                  {selectedSale.customers?.cpf && (
+                    <p className="text-xs text-slate-400">
+                      CPF: {selectedSale.customers.cpf}
+                      {selectedSale.customers.phone ? ` - Tel: ${selectedSale.customers.phone}` : ''}
+                    </p>
                   )}
                 </div>
               </div>
@@ -656,6 +692,7 @@ const SalesHistory: React.FC = () => {
                             total,
                             created_at,
                             user_id,
+                            customer_id,
                             sale_items!fk_sale_items_sale_id (
                               product_id,
                               quantity,
@@ -671,6 +708,7 @@ const SalesHistory: React.FC = () => {
                         if (updatedSale) {
                           // Buscar usuário
                           let userData = null;
+                          let customerData = null;
                           if (updatedSale.user_id) {
                             const { data } = await supabase
                               .from('users')
@@ -679,6 +717,14 @@ const SalesHistory: React.FC = () => {
                               .single();
                             userData = data;
                           }
+                          if (updatedSale.customer_id) {
+                            const { data } = await supabase
+                              .from('customers')
+                              .select('full_name, cpf, phone')
+                              .eq('id', updatedSale.customer_id)
+                              .maybeSingle();
+                            customerData = data ?? null;
+                          }
                           // Corrigir estrutura de sale_items: garantir que products seja objeto { name: string }
                           const fixedSaleItems = Array.isArray(updatedSale.sale_items)
                             ? updatedSale.sale_items.map((item: any) => ({
@@ -686,7 +732,12 @@ const SalesHistory: React.FC = () => {
                                 products: Array.isArray(item.products) ? (item.products[0] || { name: '' }) : item.products
                               }))
                             : [];
-                          setSelectedSale({ ...updatedSale, users: userData ?? undefined, sale_items: fixedSaleItems });
+                          setSelectedSale({
+                            ...updatedSale,
+                            users: userData ?? undefined,
+                            customers: customerData,
+                            sale_items: fixedSaleItems,
+                          });
                         }
                         fetchAllSales();
                       }}

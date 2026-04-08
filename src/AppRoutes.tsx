@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import DashboardMetrics from './components/DashboardMetrics';
@@ -9,6 +10,8 @@ import Login from './components/Login';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import PDV from './components/PDV';
 import SalesHistory from './components/SalesHistory';
+import Customers from './components/Customers';
+import { supabase } from './supabase';
 import './App.css';
 
 function VisaoGeral() {
@@ -46,6 +49,57 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  const [checkingRole, setCheckingRole] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkRole = async () => {
+      if (!user) {
+        setIsAdmin(false);
+        setCheckingRole(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Erro ao verificar permissao de admin:', error);
+        setIsAdmin(false);
+      } else {
+        setIsAdmin(data?.role === 'admin');
+      }
+
+      setCheckingRole(false);
+    };
+
+    checkRole();
+  }, [user]);
+
+  if (loading || checkingRole) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <div className="text-slate-500">Carregando...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (!isAdmin) {
+    return <Navigate to="/visao-geral" replace />;
   }
 
   return <>{children}</>;
@@ -135,6 +189,16 @@ function App() {
                   <SalesHistory />
                 </MainLayout>
               </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/clientes"
+            element={
+              <AdminRoute>
+                <MainLayout>
+                  <Customers />
+                </MainLayout>
+              </AdminRoute>
             }
           />
         </Routes>
