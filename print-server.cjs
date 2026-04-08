@@ -1,7 +1,6 @@
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
-const escpos = require('escpos');
 
 // Detecta se está no Linux ou Windows
 const isWindows = process.platform === 'win32';
@@ -11,14 +10,7 @@ const app = express();
 app.use(cors()); // Permite requisições do frontend
 app.use(express.json());
 
-/**
- * Encontra a impressora USB conectada
- */
-
-
-/**
- * Formata e imprime o recibo usando escpos
- */
+/**Formata e imprime o recibo usando escpos*/
 async function printReceipt(items, total, payment, company) {
   // Para Windows, detecta se impressora está como USB ou Serial (COM)
   if (isWindows) {
@@ -29,12 +21,12 @@ async function printReceipt(items, total, payment, company) {
       fs.writeFileSync(filePath, receiptText);
       // Executa comando para enviar arquivo para impressora
       const { exec } = require('child_process');
-      exec(`copy ${filePath} COM5`, (error, stdout, stderr) => {
+      exec(`copy ${filePath} COM7`, (error, stdout, stderr) => {
         if (error) {
           console.error('❌ Erro ao imprimir via comando copy:', error.message);
           return;
         }
-        console.log('✅ Recibo enviado para impressora COM5');
+        console.log('✅ Recibo enviado para impressora COM7');
       });
       return { success: true, message: 'Recibo enviado para impressora via comando copy' };
     } catch (error) {
@@ -63,7 +55,9 @@ function formatReceiptAsText(items, total, payment, company) {
   
   if (items && items.length > 0) {
     items.forEach(item => {
-      const itemName = `${item.name} x${item.qty}`;
+      // Usa custom_name se existir, senão name
+      const displayName = item.custom_name && item.custom_name.trim() !== '' ? item.custom_name : item.name;
+      const itemName = `${displayName} x${item.qty}`;
       const itemPrice = `R$ ${Number(item.price).toFixed(2)}`;
       const spaces = 40 - itemName.length - itemPrice.length;
       receipt += itemName + ' '.repeat(Math.max(1, spaces)) + itemPrice + '\n';
@@ -74,6 +68,7 @@ function formatReceiptAsText(items, total, payment, company) {
   receipt += `           TOTAL: R$ ${Number(total).toFixed(2)}           \n`;
   receipt += `        Pagamento: ${payment}        \n`;
   receipt += '----------------------------------------\n\n';
+  receipt += 'Assinatura: ____________________________\n\n';
   receipt += '     Obrigado pela preferencia!     \n\n\n\n\n';
   
   return receipt;

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import './App.css';
+import PDV from './components/PDV';
 import Sidebar from './components/Sidebar';
 import DashboardMetrics from './components/DashboardMetrics';
 import RecentSalesTable from './components/RecentSalesTable';
@@ -8,10 +9,13 @@ import ProductsTable from './components/ProductsTable';
 function App() {
   const [ tab ] = useState<string>("dashboard");
 
+  // Passa o estado do sidebar para o componente Sidebar
   return (
     <div className="bg-gray-50 text-slate-800 font-sans h-screen flex overflow-hidden">
       <Sidebar />
-      <main className="flex-1 flex flex-col h-full overflow-hidden bg-gray-50/50 relative">
+      <main
+        className="flex-1 flex flex-col h-full overflow-hidden bg-gray-50/50 relative transition-all duration-300"
+      >
         <header className="h-16 bg-white/80 backdrop-blur border-b border-gray-200 flex items-center px-4 lg:px-8 shrink-0 z-10">
           {/* Esquerda: menu e logo */}
           <div className="flex items-center gap-3 flex-1 lg:flex-none">
@@ -73,9 +77,13 @@ function App() {
             </div>
           )}
           {tab === 'sales' && (
-            <div className="space-y-6 fade-in">
-              <h1 className="text-xl font-medium tracking-tight text-slate-900">PDV / Vendas</h1>
-              <p className="text-sm text-slate-500 mt-1">Em breve: tela de vendas.</p>
+            <div className="flex flex-row gap-6 fade-in w-full h-full">
+              {/* Painel do carrinho (direita) */}
+              <div className="w-full max-w-[750px] min-w-[520px] flex-shrink-0">
+                <PDV />
+              </div>
+              {/* Painel da venda (esquerda) */}
+              <div className="flex-1 min-w-0" />
             </div>
           )}
         </div>

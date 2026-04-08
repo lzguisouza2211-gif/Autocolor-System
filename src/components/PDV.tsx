@@ -36,6 +36,8 @@ interface CartItem {
 }
 
 const PDV: React.FC = () => {
+  // Estado para abrir/fechar o carrinho (sidebar)
+  const [cartOpen, setCartOpen] = useState(false);
     // Estado para abrir scanner
     const [scannerOpen, setScannerOpen] = useState(false);
     // Handler para código de barras detectado
@@ -52,6 +54,7 @@ const PDV: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [finalizing, setFinalizing] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
+  const [addSuccess, setAddSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saleId, setSaleId] = useState<number | null>(null);
   const [cartLoaded, setCartLoaded] = useState(false);
@@ -278,7 +281,9 @@ const PDV: React.FC = () => {
       }
     });
     setError(null);
-    setSearch('');
+    setAddSuccess(`Produto "${product.name}" adicionado!`);
+    setTimeout(() => setAddSuccess(null), 1200);
+    // Não limpa o input nem fecha o dropdown
     inputRef.current?.focus();
   };
 
@@ -339,11 +344,29 @@ const PDV: React.FC = () => {
   // Atualizar nome do item (para produtos customizáveis)
   // Atualizar nome do item (para produtos customizáveis)
   const updateItemName = (index: number, newName: string) => {
-    setCart((prev) =>
-      prev.map((item, idx) =>
+    setCart((prev) => {
+      // Salvar histórico se for EMBALAGEM e nome mudou
+      const item = prev[index];
+      if (item && item.name.trim().toUpperCase() === 'EMBALAGEM' && newName.trim() !== item.name.trim()) {
+        // Salva no banco
+        supabase.from('embalagem_nome_historico').insert([
+          {
+            cart_item_id: null, // Não há id do item do carrinho, pode ser null
+            product_id: item.product_id,
+            nome_antigo: item.name,
+            nome_novo: newName,
+            user_id: user?.id ?? null
+          }
+        ]).then(({ error }) => {
+          if (error) {
+            console.error('Erro ao salvar histórico de nome de EMBALAGEM:', error);
+          }
+        });
+      }
+      return prev.map((item, idx) =>
         idx === index ? { ...item, name: newName } : item
-      )
-    );
+      );
+    });
   };
 
   // Remover item
@@ -369,11 +392,8 @@ const PDV: React.FC = () => {
       setError('Usuário não autenticado');
       return;
     }
-    const recebido = parseFloat(valorRecebido.replace(',', '.'));
-    if (isNaN(recebido) || recebido < total) {
-      setError('Valor recebido insuficiente para finalizar a venda');
-      return;
-    }
+    // Permitir finalizar mesmo sem valor recebido
+    // Se informado, pode calcular troco normalmente, mas não bloquear
     setFinalizing(true);
     setError(null);
     setSuccess(null);
@@ -406,6 +426,7 @@ const PDV: React.FC = () => {
         price: item.price_sale,
         original_price: item.original_price,
         discount: item.discount,
+        custom_name: (item.is_customizable || item.name.trim().toUpperCase() === 'EMBALAGEM') && item.name ? item.name : null,
       }));
       
       console.log('=== DETALHES DA INSERÇÃO ===');
@@ -467,24 +488,14 @@ const PDV: React.FC = () => {
 
   return (
     <div className="w-full h-full p-0 m-0">
-      <div className="w-full h-full grid grid-cols-1 lg:grid-cols-[42%_58%] gap-0 bg-transparent">
+      <div className="w-full h-full bg-transparent relative">
         {/* Coluna esquerda: busca e resultados - APENAS DESKTOP */}
-        <div className="hidden lg:flex flex-col h-full bg-white p-10">
+        <div className="flex flex-col h-full bg-white p-10 max-w-4xl mx-auto">
           <div className="flex items-center justify-between mb-4">
             <div className="font-semibold text-xl md:text-2xl">Pedido {pedidoNumero}</div>
             {/* Botão de lixeira superior removido conforme solicitado */}
           </div>
-          {cart.length > 0 && (
-            <div className="flex justify-end mb-2">
-              <button
-                className="flex items-center gap-1 px-3 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100 text-xs font-semibold border border-red-200 transition disabled:opacity-50"
-                onClick={clearCart}
-                disabled={finalizing}
-              >
-                <FiTrash2 size={14} /> Remover todos
-              </button>
-            </div>
-          )}
+
           <div className="relative w-full flex items-center gap-2">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
               <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16Z"/></svg>
@@ -510,52 +521,116 @@ const PDV: React.FC = () => {
             <div className="text-sm text-gray-400 mt-3">Nenhum produto encontrado.</div>
           )}
           {search.length > 0 && filteredProducts.length > 0 && (
-            <ul className="bg-white border rounded-lg shadow max-h-[520px] overflow-y-auto mt-3 z-10 relative divide-y">
-              {filteredProducts.map((prod, idx) => (
-                <li
-                  key={prod.id}
-                  id={`product-option-${idx}`}
-                  className={`p-3 flex flex-row items-center gap-4 transition
-                    ${prod.stock < 1 ? 'bg-red-50 cursor-not-allowed opacity-70 border border-red-200' : 'hover:bg-blue-50 cursor-pointer'}
-                    ${selectedProductIndex === idx && prod.stock > 0 ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
-                  onMouseOver={() => handleProductMouseOver(idx)}
-                  onClick={() => {
-                    if (prod.stock > 0) {
-                      addToCart(prod);
-                      setTimeout(() => { inputRef.current?.focus(); }, 0);
-                    }
-                  }}
-                  tabIndex={-1}
-                  aria-disabled={prod.stock < 1}
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className={`font-semibold text-base truncate ${prod.stock < 1 ? 'text-red-700' : 'text-slate-900'}`}>{prod.name}
-                      {prod.stock < 1 && (
-                        <span className="ml-2 inline-flex items-center text-xs font-semibold text-red-700">
-                          <svg className="inline mr-1" width="16" height="16" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
-                          Sem estoque
-                        </span>
-                      )}
+            <>
+              <ul className="bg-white border rounded-lg shadow max-h-[520px] overflow-y-auto mt-3 z-10 relative divide-y">
+                {filteredProducts.map((prod, idx) => (
+                  <li
+                    key={prod.id}
+                    id={`product-option-${idx}`}
+                    className={`p-3 flex flex-row items-center gap-4 transition
+                      ${prod.stock < 1 ? 'bg-red-50 cursor-not-allowed opacity-70 border border-red-200' : 'hover:bg-blue-50 cursor-pointer'}
+                      ${selectedProductIndex === idx && prod.stock > 0 ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
+                    onMouseOver={() => handleProductMouseOver(idx)}
+                    onClick={() => {
+                      if (prod.stock > 0) {
+                        addToCart(prod);
+                        // Mantém o dropdown aberto e o input preenchido
+                      }
+                    }}
+                    tabIndex={-1}
+                    aria-disabled={prod.stock < 1}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className={`font-semibold text-base truncate ${prod.stock < 1 ? 'text-red-700' : 'text-slate-900'}`}>{prod.name}
+                        {prod.stock < 1 && (
+                          <span className="ml-2 inline-flex items-center text-xs font-semibold text-red-700">
+                            <svg className="inline mr-1" width="16" height="16" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+                            Sem estoque
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs flex flex-wrap gap-2 ${prod.stock < 1 ? 'text-red-500' : 'text-gray-500'}">
+                        {prod.category && <span>{prod.category}</span>}
+                        {prod.mark && <span>{prod.mark}</span>}
+                        {prod.type && <span>{prod.type}</span>}
+                        {prod.color && <span>{prod.color}</span>}
+                      </div>
                     </div>
-                    <div className="text-xs flex flex-wrap gap-2 ${prod.stock < 1 ? 'text-red-500' : 'text-gray-500'}">
-                      {prod.category && <span>{prod.category}</span>}
-                      {prod.mark && <span>{prod.mark}</span>}
-                      {prod.type && <span>{prod.type}</span>}
-                      {prod.color && <span>{prod.color}</span>}
+                    <div className="flex flex-col items-end min-w-[90px]">
+                      <span className={`font-bold text-lg ${prod.stock < 1 ? 'text-red-700' : 'text-slate-900'}`}>R$ {(prod.price_sale ?? prod.price).toFixed(2)}</span>
+                      <span className={`text-xs ${prod.stock < 1 ? 'text-red-700' : 'text-gray-500'}`}>Estoque: {prod.stock}</span>
                     </div>
-                  </div>
-                  <div className="flex flex-col items-end min-w-[90px]">
-                    <span className={`font-bold text-lg ${prod.stock < 1 ? 'text-red-700' : 'text-slate-900'}`}>R$ {(prod.price_sale ?? prod.price).toFixed(2)}</span>
-                    <span className={`text-xs ${prod.stock < 1 ? 'text-red-700' : 'text-gray-500'}`}>Estoque: {prod.stock}</span>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                  </li>
+                ))}
+              </ul>
+              {addSuccess && (
+                <div className="absolute top-1 right-2 bg-green-100 text-green-800 text-xs rounded px-3 py-1 shadow transition animate-fadeIn" style={{zIndex: 20}}>
+                  {addSuccess}
+                </div>
+              )}
+            </>
           )}
         </div>
 
         {/* Coluna direita: carrinho e resumo - TELA TODA NO MOBILE */}
-        <div className="flex flex-col h-full bg-white p-4 lg:p-10 overflow-hidden">
+        {/* Botão para abrir/fechar o carrinho (sidebar) */}
+        {/* Botão para abrir/fechar carrinho - visível em todas as telas, mas posição diferente no mobile */}
+        {/* Floating Cart Button */}
+        {!cartOpen && (
+          <button
+            className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white rounded-full shadow-lg p-4 flex items-center justify-center hover:bg-slate-800 transition-all duration-200"
+            style={{ minWidth: 56, minHeight: 56, boxShadow: '0 4px 24px rgba(0,0,0,0.18)', position: 'fixed' }}
+            onClick={() => setCartOpen(true)}
+            aria-label="Abrir carrinho"
+          >
+            {/* Ícone de carrinho */}
+            <svg width="28" height="28" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M6 6h15l-1.5 9h-13z"/><circle cx="9" cy="21" r="1" fill="currentColor"/><circle cx="18" cy="21" r="1" fill="currentColor"/></svg>
+            {cart.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full px-2 py-0.5 border-2 border-white shadow" style={{minWidth: 22, textAlign: 'center'}}>
+                {cart.reduce((sum, item) => sum + item.quantity, 0)}
+              </span>
+            )}
+          </button>
+        )}
+        {/* Floating Cart Panel */}
+        {cartOpen && (
+          <>
+            {/* Overlay para fechar ao clicar fora */}
+            <div
+              className="fixed inset-0 bg-black bg-opacity-30 z-40 animate-fadeIn"
+              onClick={() => setCartOpen(false)}
+              aria-label="Fechar carrinho"
+            />
+            <div
+              className="fixed top-0 right-0 z-50 w-full max-w-full h-screen bg-white border-l border-gray-200 flex flex-col p-2 lg:p-4 shadow-2xl transition-all duration-300"
+              style={{
+                transition: 'transform 0.3s, opacity 0.3s',
+                boxShadow: '0 4px 32px rgba(0,0,0,0.18)',
+                transform: cartOpen ? 'translateX(0)' : 'translateX(100%)',
+                opacity: cartOpen ? 1 : 0,
+                width: '100%',
+                maxWidth: '600px' // até metade de uma tela fullhd
+              }}
+            >
+              {/* Botão de fechar */}
+              <div className="flex items-center justify-between mb-2">
+                <button
+                  className="text-xs px-2 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100 font-semibold border border-red-200 transition disabled:opacity-50"
+                  onClick={clearCart}
+                  disabled={finalizing || cart.length === 0}
+                  title="Limpar carrinho"
+                >
+                  Limpar carrinho
+                </button>
+                <button
+                  className="text-slate-500 hover:text-slate-900 p-1 rounded-full focus:outline-none"
+                  onClick={() => setCartOpen(false)}
+                  aria-label="Fechar carrinho"
+                  style={{ background: 'rgba(240,240,240,0.7)' }}
+                >
+                  <svg width="22" height="22" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+              </div>
           {/* Busca no mobile - no topo do carrinho */}
           <div className="lg:hidden mb-4 shrink-0">
             <div className="flex items-center justify-between mb-3">
@@ -615,7 +690,7 @@ const PDV: React.FC = () => {
               </div>
             )}
           </div>
-          <div className="flex-1 overflow-y-auto min-h-0">
+                <div className="flex-1 overflow-y-auto min-h-0 text-[14px]">
             {/* Cabeçalho - apenas desktop */}
             {cart.length > 0 && (
               <div className="hidden lg:grid grid-cols-[28px_2.4fr_0.8fr_1fr_1.2fr] gap-3 text-xs text-gray-500 uppercase tracking-wide pb-2 border-b">
@@ -630,97 +705,27 @@ const PDV: React.FC = () => {
               <div className="text-gray-400 text-center py-8">Nenhum produto adicionado</div>
             ) : (
               <ul className="divide-y">
-                {cart.map((item, idx) => (
-                  <li
-                    key={item.product_id}
-                    className={`py-4 ${selectedCartIndex === idx ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
-                    tabIndex={-1}
-                  >
-                    {/* Layout Desktop */}
-                    <div className="hidden lg:grid grid-cols-[28px_2.4fr_0.8fr_1fr_1.2fr] gap-3 items-center">
-                      <div className="flex items-center justify-center">
-                        <button
-                          className="p-1.5 rounded-full hover:bg-red-100 text-red-500"
-                          onClick={() => removeItem(item.product_id)}
-                          disabled={finalizing}
-                          title="Remover item"
-                        >
-                          <FiTrash2 size={16} />
-                        </button>
-                      </div>
-                      <div className="min-w-0">
-                        {item.is_customizable ? (
-                          <input
-                            type="text"
-                            value={item.name}
-                            onChange={(e) => updateItemName(idx, e.target.value)}
+                {cart.map((item, idx) => {
+                  const lowStock = item.stock <= 3;
+                  return (
+                    <li
+                      key={item.product_id}
+                      className={`py-3 ${selectedCartIndex === idx ? 'ring-2 ring-blue-400 bg-blue-50' : ''} ${lowStock ? 'bg-yellow-50 border-l-4 border-yellow-400' : ''}`}
+                      tabIndex={-1}
+                    >
+                      {/* Layout Desktop */}
+                      <div className="hidden lg:flex items-center gap-2 w-full whitespace-nowrap overflow-x-hidden">
+                        <div className="flex items-center justify-center flex-shrink-0">
+                          <button
+                            className="p-1.5 rounded-full hover:bg-red-100 text-red-500"
+                            onClick={() => removeItem(item.product_id)}
                             disabled={finalizing}
-                            className="w-full text-base font-semibold text-slate-900 border border-blue-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                            placeholder="Nome do produto"
-                          />
-                        ) : (
-                          <>
-                            <div className="font-semibold text-base md:text-lg break-words">{item.name}</div>
-                            <div className="text-xs text-gray-500 flex flex-wrap gap-2 break-words">
-                              {item.category && <span>{item.category}</span>}
-                              {item.mark && <span>{item.mark}</span>}
-                              {item.type && <span>{item.type}</span>}
-                              {item.color && <span>{item.color}</span>}
-                            </div>
-                          </>
-                        )}
-                      </div>
-                      <div className="flex justify-center">
-                        <div className="flex items-center gap-1 bg-gray-50 rounded-md px-1 py-0.5 border border-gray-200">
-                          <button
-                            className="w-6 h-6 md:w-7 md:h-7 rounded-md bg-white border text-sm font-semibold flex items-center justify-center"
-                            onClick={() => changeQuantity(idx, -1)}
-                            disabled={item.quantity <= 1 || finalizing}
-                          >-</button>
-                          <span className="w-6 md:w-7 text-center text-sm font-semibold text-slate-700">{item.quantity}</span>
-                          <button
-                            className="w-6 h-6 md:w-7 md:h-7 rounded-md bg-white border text-sm font-semibold flex items-center justify-center"
-                            onClick={() => changeQuantity(idx, 1)}
-                            disabled={item.quantity >= item.stock || finalizing}
-                          >+</button>
+                            title="Remover item"
+                          >
+                            <FiTrash2 size={16} />
+                          </button>
                         </div>
-                      </div>
-                      <div className="text-right flex items-center justify-end">
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={item.price_sale || ''}
-                          onChange={(e) => {
-                            if (e.target.value === '') {
-                              updateUnitPrice(idx, 0);
-                            } else {
-                              updateUnitPrice(idx, Number(e.target.value));
-                            }
-                          }}
-                          disabled={finalizing}
-                          className="w-full text-right text-sm font-medium text-slate-900 border border-gray-200 rounded px-0.2 py-0.2 focus:outline-none focus:ring-1 focus:ring-blue-200"
-                        />
-                      </div>
-                      <div className="text-right flex items-center justify-end gap-1">
-                        <span className="text-sm text-gray-500">R$</span>
-                        <input
-                          type="text"
-                          value={formatCurrency(item.subtotal)}
-                          onChange={(e) => {
-                            const numValue = parseFloat(e.target.value.replace(/[^0-9.]/g, ''));
-                            if (!isNaN(numValue)) updateTotalPrice(idx, numValue);
-                          }}
-                          disabled={finalizing}
-                          className="w-full text-right text-sm font-bold text-slate-900 border border-gray-200 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-200"
-                        />
-                      </div>
-                    </div>
-                    
-                    {/* Layout Mobile */}
-                    <div className={`lg:hidden space-y-3 ${selectedCartIndex === idx ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}> 
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0 max-w-[320px] flex flex-row items-center gap-2 justify-start">
                           {item.is_customizable ? (
                             <input
                               type="text"
@@ -732,44 +737,49 @@ const PDV: React.FC = () => {
                             />
                           ) : (
                             <>
-                              <div className="font-semibold text-base break-words">{item.name}</div>
-                              <div className="text-xs text-gray-500 flex flex-wrap gap-1">
-                                {item.category && <span>{item.category}</span>}
-                                {item.mark && <span>• {item.mark}</span>}
-                                {item.type && <span>• {item.type}</span>}
-                                {item.color && <span>• {item.color}</span>}
+                              <div
+                                className="font-semibold text-base md:text-lg min-w-0 truncate max-w-[180px]"
+                                title={item.name}
+                                style={{ display: 'inline-block', verticalAlign: 'middle' }}
+                              >
+                                {item.name}
+                                {lowStock && <span className="ml-2 text-xs text-yellow-700 font-bold">Estoque baixo</span>}
                               </div>
+                              {/* Não exibe marca, categoria, tipo ou cor no carrinho */}
                             </>
                           )}
                         </div>
-                        <button
-                          className="p-2 rounded-full hover:bg-red-100 text-red-500 flex-shrink-0"
-                          onClick={() => removeItem(item.product_id)}
-                          disabled={finalizing}
-                          title="Remover"
-                        >
-                          <FiTrash2 size={18} />
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <div className="text-xs text-gray-500 mb-1">Quantidade</div>
-                          <div className="flex items-center gap-1 bg-gray-50 rounded-md px-1 py-0.5 border border-gray-200 w-fit">
-                            <button
-                              className="w-8 h-8 rounded-md bg-white border text-sm font-semibold flex items-center justify-center"
-                              onClick={() => changeQuantity(idx, -1)}
-                              disabled={item.quantity <= 1 || finalizing}
-                            >-</button>
-                            <span className="w-8 text-center text-sm font-semibold text-slate-700">{item.quantity}</span>
-                            <button
-                              className="w-8 h-8 rounded-md bg-white border text-sm font-semibold flex items-center justify-center"
-                              onClick={() => changeQuantity(idx, 1)}
-                              disabled={item.quantity >= item.stock || finalizing}
-                            >+</button>
-                          </div>
+                        <div className="flex items-center flex-shrink-0 min-w-[120px] gap-2">
+                          <button
+                            className="w-7 h-7 rounded bg-slate-100 border border-gray-300 text-base font-bold flex items-center justify-center hover:bg-slate-200 transition disabled:opacity-50"
+                            onClick={() => changeQuantity(idx, -1)}
+                            disabled={item.quantity <= 1 || finalizing}
+                            tabIndex={-1}
+                          >-</button>
+                          <input
+                            type="number"
+                            min={1}
+                            max={item.stock}
+                            value={item.quantity}
+                            disabled={finalizing}
+                            onChange={e => {
+                              let value = parseInt(e.target.value, 10);
+                              if (isNaN(value) || value < 1) value = 1;
+                              if (value > item.stock) value = item.stock;
+                              changeQuantity(idx, value - item.quantity);
+                            }}
+                            className="text-center text-base font-semibold text-slate-700 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            style={{ MozAppearance: 'textfield', appearance: 'textfield', width: 48, minWidth: 48, maxWidth: 48 }}
+                            onWheel={e => e.currentTarget.blur()}
+                          />
+                          <button
+                            className="w-7 h-7 rounded bg-slate-100 border border-gray-300 text-base font-bold flex items-center justify-center hover:bg-slate-200 transition disabled:opacity-50"
+                            onClick={() => changeQuantity(idx, 1)}
+                            disabled={item.quantity >= item.stock || finalizing}
+                            tabIndex={-1}
+                          >+</button>
                         </div>
-                        <div>
-                          <div className="text-xs text-gray-500 mb-1">Unitário</div>
+                        <div className="flex items-center flex-shrink-0 min-w-[90px] max-w-[100px]">
                           <input
                             type="number"
                             min="0"
@@ -777,32 +787,107 @@ const PDV: React.FC = () => {
                             value={item.price_sale || ''}
                             onChange={(e) => {
                               if (e.target.value === '') {
-                                updateUnitPrice(item.product_id, 0);
+                                updateUnitPrice(idx, 0);
                               } else {
-                                updateUnitPrice(item.product_id, Number(e.target.value));
+                                updateUnitPrice(idx, Number(e.target.value));
                               }
                             }}
                             disabled={finalizing}
-                            className="w-full text-left text-sm font-medium text-slate-900 border border-gray-200 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-200"
+                            className="text-right text-base font-medium text-slate-900 border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-200"
+                            style={{ width: 70, minWidth: 70, maxWidth: 70 }}
+                          />
+                        </div>
+                        <div className="flex items-center flex-shrink-0 min-w-[90px] max-w-[100px] justify-end">
+                          <span className="text-base font-bold text-slate-900 bg-slate-100 rounded px-2 py-1 ml-1" style={{ width: 90, minWidth: 90, maxWidth: 90, display: 'inline-block', textAlign: 'right', overflow: 'hidden' }}>R$ {formatCurrency(item.subtotal)}</span>
+                        </div>
+                      </div>
+                      {/* Layout Mobile */}
+                      <div className={`lg:hidden space-y-3 ${selectedCartIndex === idx ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}> 
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            {item.is_customizable ? (
+                              <input
+                                type="text"
+                                value={item.name}
+                                onChange={(e) => updateItemName(idx, e.target.value)}
+                                disabled={finalizing}
+                                className="w-full text-base font-semibold text-slate-900 border border-blue-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                placeholder="Nome do produto"
+                              />
+                            ) : (
+                              <>
+                                <div className="font-semibold text-base break-words">{item.name}</div>
+                                <div className="text-xs text-gray-500 flex flex-wrap gap-1">
+                                  {item.category && <span>{item.category}</span>}
+                                  {item.mark && <span>• {item.mark}</span>}
+                                  {item.type && <span>• {item.type}</span>}
+                                  {item.color && <span>• {item.color}</span>}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                          <button
+                            className="p-2 rounded-full hover:bg-red-100 text-red-500 flex-shrink-0"
+                            onClick={() => removeItem(item.product_id)}
+                            disabled={finalizing}
+                            title="Remover"
+                          >
+                            <FiTrash2 size={18} />
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <div className="text-xs text-gray-500 mb-1">Quantidade</div>
+                            <div className="flex items-center gap-1 bg-gray-50 rounded-md px-1 py-0.5 border border-gray-200 w-fit">
+                              <button
+                                className="w-8 h-8 rounded-md bg-white border text-sm font-semibold flex items-center justify-center"
+                                onClick={() => changeQuantity(idx, -1)}
+                                disabled={item.quantity <= 1 || finalizing}
+                              >-</button>
+                              <span className="w-8 text-center text-sm font-semibold text-slate-700">{item.quantity}</span>
+                              <button
+                                className="w-8 h-8 rounded-md bg-white border text-sm font-semibold flex items-center justify-center"
+                                onClick={() => changeQuantity(idx, 1)}
+                                disabled={item.quantity >= item.stock || finalizing}
+                              >+</button>
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-500 mb-1">Unitário</div>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={item.price_sale || ''}
+                              onChange={(e) => {
+                                if (e.target.value === '') {
+                                  updateUnitPrice(item.product_id, 0);
+                                } else {
+                                  updateUnitPrice(item.product_id, Number(e.target.value));
+                                }
+                              }}
+                              disabled={finalizing}
+                              className="w-full text-left text-sm font-medium text-slate-900 border border-gray-200 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-200"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-500 mb-1">Total</div>
+                          <input
+                            type="text"
+                            value={`R$ ${formatCurrency(item.subtotal)}`}
+                            onChange={(e) => {
+                              const numValue = parseFloat(e.target.value.replace(/[^0-9.]/g, ''));
+                              if (!isNaN(numValue)) updateTotalPrice(item.product_id, numValue);
+                            }}
+                            disabled={finalizing}
+                            className="w-full text-left text-base font-bold text-slate-900 border border-gray-200 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-200"
                           />
                         </div>
                       </div>
-                      <div>
-                        <div className="text-xs text-gray-500 mb-1">Total</div>
-                        <input
-                          type="text"
-                          value={`R$ ${formatCurrency(item.subtotal)}`}
-                          onChange={(e) => {
-                            const numValue = parseFloat(e.target.value.replace(/[^0-9.]/g, ''));
-                            if (!isNaN(numValue)) updateTotalPrice(item.product_id, numValue);
-                          }}
-                          disabled={finalizing}
-                          className="w-full text-left text-base font-bold text-slate-900 border border-gray-200 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-200"
-                        />
-                      </div>
-                    </div>
-                  </li>
-                ))}
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
@@ -829,7 +914,7 @@ const PDV: React.FC = () => {
                 type="number"
                 min="0"
                 step="0.01"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-200"
+                className="w-2/3 border border-gray-300 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-200"
                 placeholder="Digite o valor recebido"
                 value={valorRecebido}
                 onChange={e => setValorRecebido(e.target.value)}
@@ -837,9 +922,11 @@ const PDV: React.FC = () => {
               />
               <div className="flex justify-between items-center text-base font-semibold mt-1">
                 <span>Troco</span>
-                <span className={troco < 0 ? 'text-red-600' : 'text-green-600'}>
-                  R$ {troco.toFixed(2)}
-                </span>
+                {valorRecebido.trim() !== '' && (
+                  <span className={troco < 0 ? 'text-red-600' : 'text-green-600'}>
+                    R$ {troco.toFixed(2)}
+                  </span>
+                )}
               </div>
             </div>
             <button
@@ -850,7 +937,9 @@ const PDV: React.FC = () => {
               {finalizing ? 'Registrando...' : 'Finalizar Venda →'}
             </button>
           </div>
-        </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

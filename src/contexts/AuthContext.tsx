@@ -41,6 +41,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       updateUser(session?.user ?? null);
     });
 
+    // Deslogar usuário ao fechar/recarregar a página
+    const handleUnload = async () => {
+      await supabase.auth.signOut();
+      setUser(null);
+    };
+    window.addEventListener('beforeunload', handleUnload);
+
     // Intervalo para renovar sessão periodicamente (a cada 9 minutos)
     refreshInterval.current = window.setInterval(async () => {
       const { data: { session } } = await supabase.auth.getSession();

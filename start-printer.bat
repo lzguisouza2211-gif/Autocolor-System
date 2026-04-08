@@ -9,7 +9,7 @@ title AutoColor - Servidor de Impressao (Rodando...)
 
 REM Muda para o diretório onde o projeto está instalado
 REM IMPORTANTE: Altere o caminho abaixo para o local onde você instalou o projeto
-cd /d "C:\Usuarios\[SEU_USUARIO]\AutoColor-System"
+cd /d "C:\Users\Toqueto\Documents\AutoColor-System\Autocolor-System"
 
 REM Verifica se o Node.js está instalado
 where node >nul 2>nul
