@@ -1,3 +1,13 @@
+/* Remove spinners dos inputs type=number em todos navegadores */
+.hide-spin::-webkit-outer-spin-button,
+.hide-spin::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.hide-spin[type=number] {
+  -moz-appearance: textfield;
+}
 /* Mobile hamburger menu styles */
 .mobile-menu {
   display: none;

@@ -245,15 +245,43 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave }) => {
       </div>
       <div>
         <label className="block text-xs sm:text-sm font-medium mb-1">Preço de Custo</label>
-        <input name="price" type="number" value={form.price} onChange={handleChange} className="w-full border rounded px-3 py-2 text-sm" required />
+        <input
+          name="price"
+          type="number"
+          value={form.price}
+          onChange={handleChange}
+          className="w-full border rounded px-3 py-2 text-sm hide-spin"
+          required
+          inputMode="decimal"
+          onWheel={e => e.target.blur()}
+        />
       </div>
       <div>
         <label className="block text-xs sm:text-sm font-medium mb-1">Preço de Venda</label>
-        <input name="price_sale" type="number" value={form.price_sale} onChange={handleChange} className="w-full border rounded px-3 py-2 text-sm" required />
+        <input
+          name="price_sale"
+          type="number"
+          value={form.price_sale}
+          onChange={handleChange}
+          className="w-full border rounded px-3 py-2 text-sm hide-spin"
+          required
+          inputMode="decimal"
+          onWheel={e => e.target.blur()}
+        />
       </div>
       <div>
         <label className="block text-xs sm:text-sm font-medium mb-1">Estoque (Quantidade)</label>
-        <input name="stock" type="number" value={form.stock} onChange={handleChange} className="w-full border rounded px-3 py-2 text-sm" required min="0" />
+        <input
+          name="stock"
+          type="number"
+          value={form.stock}
+          onChange={handleChange}
+          className="w-full border rounded px-3 py-2 text-sm hide-spin"
+          required
+          min="0"
+          inputMode="decimal"
+          onWheel={e => e.target.blur()}
+        />
       </div>
         </>
       )}
