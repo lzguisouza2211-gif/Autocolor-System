@@ -7,6 +7,7 @@
 
 .hide-spin[type=number] {
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 /* Remove spinners dos inputs type=number em todos navegadores */
 .hide-spin::-webkit-outer-spin-button,

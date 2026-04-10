@@ -3,7 +3,7 @@ import { Icon } from '@iconify/react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { SidebarOpenContext } from './SidebarContext.tsx';
-import { supabase } from '../supabase';
+// import { supabase } from '../supabase';
 
 const baseNavItems = [
   { to: '/visao-geral', icon: 'solar:widget-2-linear', label: 'Dashboard' },
@@ -16,36 +16,36 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ onOpenChange }) => {
-  const { signOut, user } = useAuth();
+  const { signOut } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = React.useState(false);
-  const [isAdmin, setIsAdmin] = React.useState(false);
+  // const [isAdmin, setIsAdmin] = React.useState(false); // Removido pois não está em uso
   const sidebarRef = React.useRef<HTMLDivElement>(null);
 
-  React.useEffect(() => {
-    const loadRole = async () => {
-      if (!user) {
-        setIsAdmin(false);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      if (error) {
-        console.error('Erro ao carregar role no menu lateral:', error);
-        setIsAdmin(false);
-        return;
-      }
-
-      setIsAdmin(data?.role === 'admin');
-    };
-
-    loadRole();
-  }, [user]);
+  // --- INÍCIO: Lógica de admin/role comentada ---
+  // React.useEffect(() => {
+  //   const loadRole = async () => {
+  //     if (!user) {
+  //       return;
+  //     }
+  //
+  //     const { data, error } = await supabase
+  //       .from('users')
+  //       .select('role')
+  //       .eq('id', user.id)
+  //       .maybeSingle();
+  //
+  //     if (error) {
+  //       console.error('Erro ao carregar role no menu lateral:', error);
+  //       return;
+  //     }
+  //
+  //     // setIsAdmin(data?.role === 'admin');
+  //   };
+  //
+  //   loadRole();
+  // }, [user]);
+  // --- FIM: Lógica de admin/role comentada ---
 
   // Esconde temporariamente o botão Clientes da sidebar
   const navItems = baseNavItems;
