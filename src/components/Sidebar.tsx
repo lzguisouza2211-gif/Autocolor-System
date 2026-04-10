@@ -47,9 +47,8 @@ const Sidebar: React.FC<SidebarProps> = ({ onOpenChange }) => {
     loadRole();
   }, [user]);
 
-  const navItems = isAdmin
-    ? [...baseNavItems, { to: '/clientes', icon: 'solar:users-group-two-rounded-linear', label: 'Clientes' }]
-    : baseNavItems;
+  // Esconde temporariamente o botão Clientes da sidebar
+  const navItems = baseNavItems;
 
   // Mouse enter/leave para abrir/fechar
   const handleMouseEnter = () => {
