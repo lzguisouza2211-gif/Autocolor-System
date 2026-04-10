@@ -253,7 +253,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave }) => {
           className="w-full border rounded px-3 py-2 text-sm hide-spin"
           required
           inputMode="decimal"
-          onWheel={e => e.target.blur()}
+          onWheel={e => (e.target as HTMLInputElement).blur()}
         />
       </div>
       <div>
@@ -266,7 +266,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave }) => {
           className="w-full border rounded px-3 py-2 text-sm hide-spin"
           required
           inputMode="decimal"
-          onWheel={e => e.target.blur()}
+          onWheel={e => (e.target as HTMLInputElement).blur()}
         />
       </div>
       <div>
@@ -280,7 +280,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave }) => {
           required
           min="0"
           inputMode="decimal"
-          onWheel={e => e.target.blur()}
+          onWheel={e => (e.target as HTMLInputElement).blur()}
         />
       </div>
         </>

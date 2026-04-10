@@ -803,7 +803,7 @@ const PDV: React.FC = () => {
                               if (value > item.stock) value = item.stock;
                               changeQuantity(idx, value - item.quantity);
                             }}
-                            className="text-center text-base font-semibold text-slate-700 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            className="text-center text-base font-semibold text-slate-700 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 hide-spin"
                             style={{ MozAppearance: 'textfield', appearance: 'textfield', width: 48, minWidth: 48, maxWidth: 48 }}
                             onWheel={e => e.currentTarget.blur()}
                           />
@@ -828,8 +828,9 @@ const PDV: React.FC = () => {
                               }
                             }}
                             disabled={finalizing}
-                            className="text-right text-base font-medium text-slate-900 border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-200"
+                            className="text-right text-base font-medium text-slate-900 border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-200 hide-spin"
                             style={{ width: 70, minWidth: 70, maxWidth: 70 }}
+                            onWheel={e => e.currentTarget.blur()}
                           />
                         </div>
                         <div className="flex items-center flex-shrink-0 min-w-[90px] max-w-[100px] justify-end">
