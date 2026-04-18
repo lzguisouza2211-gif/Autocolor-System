@@ -17,7 +17,8 @@ interface SaleDetail {
   };
   customers?: {
     full_name: string;
-    cpf: string;
+    cpf: string | null;
+    cnpj: string | null;
     phone: string | null;
   } | null;
   sale_items: Array<{
@@ -166,7 +167,7 @@ const SalesHistory: React.FC = () => {
           if (sale.customer_id) {
             const { data } = await supabase
               .from('customers')
-              .select('full_name, cpf, phone')
+              .select('full_name, cpf, cnpj, phone')
               .eq('id', sale.customer_id)
               .maybeSingle();
             customerData = data ?? null;
@@ -320,9 +321,9 @@ const SalesHistory: React.FC = () => {
                   <p className="text-sm font-semibold text-slate-900">
                     {selectedSale.customers?.full_name || 'Não informado'}
                   </p>
-                  {selectedSale.customers?.cpf && (
+                  {(selectedSale.customers?.cpf || selectedSale.customers?.cnpj) && (
                     <p className="text-xs text-slate-400">
-                      CPF: {selectedSale.customers.cpf}
+                      {selectedSale.customers?.cnpj ? 'CNPJ' : 'CPF'}: {selectedSale.customers?.cnpj || selectedSale.customers?.cpf}
                       {selectedSale.customers.phone ? ` - Tel: ${selectedSale.customers.phone}` : ''}
                     </p>
                   )}
@@ -736,7 +737,7 @@ const SalesHistory: React.FC = () => {
                           if (updatedSale.customer_id) {
                             const { data } = await supabase
                               .from('customers')
-                              .select('full_name, cpf, phone')
+                              .select('full_name, cpf, cnpj, phone')
                               .eq('id', updatedSale.customer_id)
                               .maybeSingle();
                             customerData = data ?? null;

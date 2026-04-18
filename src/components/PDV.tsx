@@ -38,7 +38,8 @@ interface CartItem {
 interface CustomerOption {
   id: number;
   full_name: string;
-  cpf: string;
+  cpf: string | null;
+  cnpj: string | null;
   phone: string | null;
   street: string | null;
   address_number: string | null;
@@ -104,13 +105,18 @@ const PDV: React.FC = () => {
       if (!customerSearchTerm) return true;
       return (
         customer.full_name.toLowerCase().includes(customerSearchTerm) ||
-        customer.cpf.toLowerCase().includes(customerSearchTerm) ||
+        (customer.cpf ?? '').toLowerCase().includes(customerSearchTerm) ||
+        (customer.cnpj ?? '').toLowerCase().includes(customerSearchTerm) ||
         (customer.phone ?? '').toLowerCase().includes(customerSearchTerm)
       );
     })
     .slice(0, 12);
 
-  const formatCustomerShortLabel = (customer: CustomerOption) => `${customer.full_name} • ${customer.cpf}`;
+  const getCustomerDocumentValue = (customer: CustomerOption) => customer.cnpj || customer.cpf || '-';
+  const getCustomerDocumentLabel = (customer: CustomerOption) => (customer.cnpj ? 'CNPJ' : 'CPF');
+
+  const formatCustomerShortLabel = (customer: CustomerOption) =>
+    `${customer.full_name} • ${getCustomerDocumentValue(customer)}`;
 
   const selectCustomer = (customer: CustomerOption) => {
     setSelectedCustomer(customer);
@@ -240,7 +246,7 @@ const PDV: React.FC = () => {
     setLoadingCustomers(true);
     supabase
       .from('customers')
-      .select('id, full_name, cpf, phone, street, address_number, neighborhood')
+      .select('id, full_name, cpf, cnpj, phone, street, address_number, neighborhood')
       .order('full_name', { ascending: true })
       .then(({ data, error }) => {
         if (error) {
@@ -1133,7 +1139,9 @@ const PDV: React.FC = () => {
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-slate-900 truncate">{selectedCustomer.full_name}</p>
-                      <p className="text-xs text-slate-600">CPF: {selectedCustomer.cpf}</p>
+                      <p className="text-xs text-slate-600">
+                        {getCustomerDocumentLabel(selectedCustomer)}: {getCustomerDocumentValue(selectedCustomer)}
+                      </p>
                       <p className="text-xs text-slate-500 truncate">
                         {selectedCustomer.phone ? `Telefone: ${selectedCustomer.phone}` : 'Sem telefone cadastrado'}
                       </p>
@@ -1143,7 +1151,7 @@ const PDV: React.FC = () => {
                 ) : (
                   <div>
                     <p className="text-sm font-semibold text-slate-900">Selecionar cliente</p>
-                    <p className="text-xs text-slate-500 mt-0.5">Busca por nome, CPF ou telefone</p>
+                    <p className="text-xs text-slate-500 mt-0.5">Busca por nome, CPF/CNPJ ou telefone</p>
                   </div>
                 )}
               </button>
@@ -1159,7 +1167,7 @@ const PDV: React.FC = () => {
                       ref={customerInputRef}
                       type="text"
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-base bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
-                      placeholder="Digite nome, CPF ou telefone..."
+                      placeholder="Digite nome, CPF/CNPJ ou telefone..."
                       value={customerSearch}
                       onChange={(e) => {
                         setCustomerSearch(e.target.value);

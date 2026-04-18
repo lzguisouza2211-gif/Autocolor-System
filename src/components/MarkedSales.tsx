@@ -9,7 +9,8 @@ interface PendingSale {
   customer_id: number | null;
   customers: {
     full_name: string;
-    cpf: string;
+    cpf: string | null;
+    cnpj: string | null;
     phone: string | null;
   } | null;
 }
@@ -25,7 +26,8 @@ interface PendingSaleRow {
 interface CustomerRow {
   id: number;
   full_name: string;
-  cpf: string;
+  cpf: string | null;
+  cnpj: string | null;
   phone: string | null;
 }
 
@@ -60,11 +62,15 @@ interface CustomerSalesRow {
 interface GroupedCustomer {
   customerId: number;
   fullName: string;
-  cpf: string;
+  cpf: string | null;
+  cnpj: string | null;
   phone: string | null;
   pendingCount: number;
   pendingTotal: number;
 }
+
+const getCustomerDocumentValue = (customer: Pick<GroupedCustomer, 'cpf' | 'cnpj'>) => customer.cnpj || customer.cpf || '-';
+const getCustomerDocumentLabel = (customer: Pick<GroupedCustomer, 'cpf' | 'cnpj'>) => (customer.cnpj ? 'CNPJ' : 'CPF');
 
 const MarkedSales: React.FC = () => {
   const [pendingSales, setPendingSales] = useState<PendingSale[]>([]);
@@ -122,7 +128,7 @@ const MarkedSales: React.FC = () => {
     if (customerIds.length > 0) {
       const { data: customersData, error: customersError } = await supabase
         .from('customers')
-        .select('id, full_name, cpf, phone')
+        .select('id, full_name, cpf, cnpj, phone')
         .in('id', customerIds);
 
       if (customersError) {
@@ -300,6 +306,7 @@ const MarkedSales: React.FC = () => {
           customerId: sale.customer_id,
           fullName: sale.customers.full_name,
           cpf: sale.customers.cpf,
+          cnpj: sale.customers.cnpj,
           phone: sale.customers.phone,
           pendingCount: 1,
           pendingTotal: Math.max(0, Number(sale.total) - Number(sale.paid_amount)),
@@ -351,7 +358,7 @@ const MarkedSales: React.FC = () => {
                 >
                   <p className="text-sm font-medium text-slate-900">{customer.fullName}</p>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    {customer.cpf}
+                    {getCustomerDocumentValue(customer)}
                     {customer.phone ? ` - ${customer.phone}` : ''}
                   </p>
                   <p className="text-xs text-amber-700 mt-1">
@@ -379,7 +386,7 @@ const MarkedSales: React.FC = () => {
               <div>
                 <p className="text-sm font-semibold text-slate-900">{selectedCustomer.fullName}</p>
                 <p className="text-xs text-slate-500 mt-1">
-                  {selectedCustomer.cpf}
+                  {getCustomerDocumentLabel(selectedCustomer)}: {getCustomerDocumentValue(selectedCustomer)}
                   {selectedCustomer.phone ? ` - ${selectedCustomer.phone}` : ''}
                 </p>
               </div>

@@ -6,7 +6,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 interface Customer {
   id: number;
   full_name: string;
-  cpf: string;
+  cpf: string | null;
+  cnpj: string | null;
   phone: string | null;
   birth_date: string | null;
   zip_code: string | null;
@@ -22,6 +23,7 @@ interface Customer {
 interface CustomerForm {
   full_name: string;
   cpf: string;
+  cnpj: string;
   phone: string;
   birth_date: string;
   zip_code: string;
@@ -63,6 +65,7 @@ interface CustomerSalesRow {
 
 type FormMode = 'create' | 'edit' | 'view';
 type CustomersPageMode = 'list' | 'create' | 'edit' | 'view';
+type DocumentType = 'cpf' | 'cnpj';
 
 interface CustomersProps {
   pageMode: CustomersPageMode;
@@ -71,6 +74,7 @@ interface CustomersProps {
 const emptyForm: CustomerForm = {
   full_name: '',
   cpf: '',
+  cnpj: '',
   phone: '',
   birth_date: '',
   zip_code: '',
@@ -95,6 +99,15 @@ const maskCpf = (value: string) => {
   return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9, 11)}`;
 };
 
+const maskCnpj = (value: string) => {
+  const digits = onlyDigits(value).slice(0, 14);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 5) return `${digits.slice(0, 2)}.${digits.slice(2)}`;
+  if (digits.length <= 8) return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5)}`;
+  if (digits.length <= 12) return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8)}`;
+  return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12, 14)}`;
+};
+
 const maskPhone = (value: string) => {
   const digits = onlyDigits(value).slice(0, 11);
   if (digits.length <= 2) return digits;
@@ -110,6 +123,33 @@ const maskZipCode = (value: string) => {
 };
 
 const normalizeState = (value: string) => value.replace(/[^a-zA-Z]/g, '').slice(0, 2).toUpperCase();
+
+const getDocumentValue = (customer: Pick<Customer, 'cpf' | 'cnpj'>) => customer.cnpj || customer.cpf || '-';
+
+const normalizeAddressPart = (value: string | null | undefined) => {
+  const normalizedValue = (value ?? '').trim();
+  if (!normalizedValue || normalizedValue === '-') return '';
+  return normalizedValue;
+};
+
+const formatCustomerAddress = (form: Pick<CustomerForm, 'street' | 'address_number' | 'address_complement' | 'neighborhood' | 'city' | 'state' | 'zip_code'>) => {
+  const street = normalizeAddressPart(form.street);
+  const number = normalizeAddressPart(form.address_number);
+  const complement = normalizeAddressPart(form.address_complement);
+  const neighborhood = normalizeAddressPart(form.neighborhood);
+  const city = normalizeAddressPart(form.city);
+  const state = normalizeAddressPart(form.state);
+  const zipCode = normalizeAddressPart(form.zip_code);
+
+  const streetWithNumber = street && number ? `${street}, ${number}` : street || (number ? `Nº ${number}` : '');
+  const cityWithState = [city, state].filter(Boolean).join('/');
+  const location = [neighborhood, cityWithState].filter(Boolean).join(' - ');
+  const formattedAddress = [streetWithNumber, complement, location].filter(Boolean).join(' - ');
+
+  if (!formattedAddress && !zipCode) return '-';
+  if (!formattedAddress) return zipCode;
+  return zipCode ? `${formattedAddress} (${zipCode})` : formattedAddress;
+};
 
 const normalizePaidAmount = (total: number, paidAmount: number | null | undefined, status: 'paid' | 'pending') => {
   if (status === 'paid') {
@@ -132,6 +172,7 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<FormMode>(pageMode === 'create' ? 'create' : pageMode === 'edit' ? 'edit' : 'view');
+  const [documentType, setDocumentType] = useState<DocumentType>('cpf');
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [form, setForm] = useState<CustomerForm>(emptyForm);
   const [saving, setSaving] = useState(false);
@@ -141,6 +182,7 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
   const [cepError, setCepError] = useState<string | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [settlingSaleId, setSettlingSaleId] = useState<number | null>(null);
+  const [abatementValues, setAbatementValues] = useState<Record<number, string>>({});
   const [customerOverview, setCustomerOverview] = useState<CustomerAccountOverview | null>(null);
   const [customerSalesHistory, setCustomerSalesHistory] = useState<CustomerSaleHistoryItem[]>([]);
   const lastCepLookup = useRef<string>('');
@@ -216,7 +258,8 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
     return customers.filter((customer) => {
       return (
         customer.full_name.toLowerCase().includes(term) ||
-        customer.cpf.toLowerCase().includes(term) ||
+        (customer.cpf ?? '').toLowerCase().includes(term) ||
+        (customer.cnpj ?? '').toLowerCase().includes(term) ||
         (customer.phone ?? '').toLowerCase().includes(term) ||
         (customer.city ?? '').toLowerCase().includes(term)
       );
@@ -314,12 +357,65 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
     setSettlingSaleId(null);
   };
 
+  const handleApplyAbatement = async (saleId: number) => {
+    if (!selectedCustomerId) return;
+
+    const selectedSale = customerSalesHistory.find((sale) => sale.sale_id === saleId);
+    if (!selectedSale || selectedSale.payment_status !== 'pending') return;
+
+    const rawValue = abatementValues[saleId] ?? '';
+    const amount = Number(rawValue.replace(',', '.'));
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setError('Informe um valor de abatimento maior que zero.');
+      return;
+    }
+
+    if (amount > selectedSale.remaining_amount) {
+      setError('O abatimento não pode ser maior que o valor restante da venda.');
+      return;
+    }
+
+    setSettlingSaleId(saleId);
+    setError(null);
+    setSuccess(null);
+
+    const newPaidAmount = Math.min(selectedSale.total, selectedSale.paid_amount + amount);
+    const isSettled = newPaidAmount >= selectedSale.total;
+
+    const { error: updateError } = await supabase
+      .from('sales')
+      .update({
+        paid_amount: newPaidAmount,
+        payment_status: isSettled ? 'paid' : 'pending',
+        paid_at: isSettled ? new Date().toISOString() : null,
+      })
+      .eq('id', saleId)
+      .is('deleted_at', null);
+
+    if (updateError) {
+      setError(`Erro ao abater valor da venda #${saleId}: ${updateError.message}`);
+      setSettlingSaleId(null);
+      return;
+    }
+
+    setSuccess(
+      isSettled
+        ? `Venda #${saleId} quitada com sucesso após abatimento.`
+        : `Abatimento aplicado na venda #${saleId}.`
+    );
+    setAbatementValues((prev) => ({ ...prev, [saleId]: '' }));
+    await fetchCustomerFinancialData(selectedCustomerId);
+    setSettlingSaleId(null);
+  };
+
   const loadCustomerIntoForm = (customer: Customer, nextMode: FormMode) => {
     setSelectedCustomerId(customer.id);
     setMode(nextMode);
     setForm({
       full_name: customer.full_name ?? '',
       cpf: customer.cpf ?? '',
+      cnpj: customer.cnpj ?? '',
       phone: customer.phone ?? '',
       birth_date: customer.birth_date ?? '',
       zip_code: customer.zip_code ?? '',
@@ -330,9 +426,11 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
       city: customer.city ?? '',
       state: customer.state ?? '',
     });
+    setDocumentType(customer.cnpj ? 'cnpj' : 'cpf');
     setError(null);
     setSuccess(null);
     setCepError(null);
+    setAbatementValues({});
 
     if (nextMode === 'view') {
       fetchCustomerFinancialData(customer.id);
@@ -347,6 +445,7 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
 
     if (pageMode === 'create') {
       setMode('create');
+      setDocumentType('cpf');
       setSelectedCustomerId(null);
       setForm(emptyForm);
       setError(null);
@@ -354,6 +453,7 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
       setCepError(null);
       setCustomerOverview(null);
       setCustomerSalesHistory([]);
+      setAbatementValues({});
       lastCepLookup.current = '';
       return;
     }
@@ -378,6 +478,7 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
 
       setForm((prev) => {
         if (field === 'cpf') return { ...prev, cpf: maskCpf(value) };
+        if (field === 'cnpj') return { ...prev, cnpj: maskCnpj(value) };
         if (field === 'phone') return { ...prev, phone: maskPhone(value) };
         if (field === 'zip_code') return { ...prev, zip_code: maskZipCode(value) };
         if (field === 'state') return { ...prev, state: normalizeState(value) };
@@ -397,6 +498,7 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
     if (mode === 'view') return;
 
     const cpfDigits = onlyDigits(form.cpf);
+    const cnpjDigits = onlyDigits(form.cnpj);
     const zipDigits = onlyDigits(form.zip_code);
     const phoneDigits = onlyDigits(form.phone);
 
@@ -405,8 +507,13 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
       return;
     }
 
-    if (cpfDigits.length !== 11) {
-      setError('CPF inválido. Informe os 11 dígitos.');
+    if (documentType === 'cpf') {
+      if (cpfDigits.length !== 11) {
+        setError('CPF inválido. Informe os 11 dígitos.');
+        return;
+      }
+    } else if (cnpjDigits.length !== 14) {
+      setError('CNPJ inválido. Informe os 14 dígitos.');
       return;
     }
 
@@ -419,7 +526,8 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
 
     const payload = {
       full_name: form.full_name.trim(),
-      cpf: maskCpf(cpfDigits),
+      cpf: documentType === 'cpf' ? maskCpf(cpfDigits) : null,
+      cnpj: documentType === 'cnpj' ? maskCnpj(cnpjDigits) : null,
       phone: phoneDigits ? maskPhone(phoneDigits) : null,
       birth_date: form.birth_date || null,
       zip_code: zipDigits ? maskZipCode(zipDigits) : null,
@@ -437,6 +545,8 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
       if (insertError) {
         if (insertError.message.includes('customers_cpf_key')) {
           setError('Já existe cliente com este CPF.');
+        } else if (insertError.message.includes('idx_customers_cnpj_unique') || insertError.message.includes('customers_cnpj_key')) {
+          setError('Já existe cliente com este CNPJ.');
         } else {
           setError(`Erro ao cadastrar cliente: ${insertError.message}`);
         }
@@ -464,6 +574,8 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
     if (updateError) {
       if (updateError.message.includes('customers_cpf_key')) {
         setError('Já existe cliente com este CPF.');
+      } else if (updateError.message.includes('idx_customers_cnpj_unique') || updateError.message.includes('customers_cnpj_key')) {
+        setError('Já existe cliente com este CNPJ.');
       } else {
         setError(`Erro ao atualizar cliente: ${updateError.message}`);
       }
@@ -481,6 +593,8 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
   const modeTitle =
     mode === 'create' ? 'Cadastro de Cliente' : mode === 'edit' ? 'Editar Cliente' : 'Visualização do Cliente';
 
+  const formattedAddress = formatCustomerAddress(form);
+
   if (pageMode === 'list') {
     return (
       <div className="space-y-6">
@@ -494,7 +608,7 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
               />
               <input
                 type="text"
-                placeholder="Buscar por nome, CPF, telefone ou cidade..."
+                placeholder="Buscar por nome, CPF/CNPJ, telefone ou cidade..."
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
@@ -519,7 +633,7 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
                 <thead className="bg-gray-50 text-xs uppercase text-slate-500 font-medium">
                   <tr>
                     <th className="px-4 py-3 tracking-wider">Nome</th>
-                    <th className="px-4 py-3 tracking-wider">CPF</th>
+                    <th className="px-4 py-3 tracking-wider">CPF/CNPJ</th>
                     <th className="px-4 py-3 tracking-wider">Telefone</th>
                     <th className="px-4 py-3 tracking-wider">Cidade/UF</th>
                     <th className="px-4 py-3 tracking-wider">Nascimento</th>
@@ -532,7 +646,7 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
                       <td className="px-4 py-4">
                         <div className="font-medium text-slate-900">{customer.full_name}</div>
                       </td>
-                      <td className="px-4 py-4">{customer.cpf}</td>
+                      <td className="px-4 py-4">{getDocumentValue(customer)}</td>
                       <td className="px-4 py-4">{customer.phone ?? '-'}</td>
                       <td className="px-4 py-4">
                         {(customer.city ?? '-') + (customer.state ? `/${customer.state}` : '')}
@@ -577,7 +691,7 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="font-semibold text-slate-900">{customer.full_name}</p>
-                        <p className="text-xs text-slate-500 mt-1">{customer.cpf}</p>
+                        <p className="text-xs text-slate-500 mt-1">{getDocumentValue(customer)}</p>
                         <p className="text-xs text-slate-500">{customer.phone ?? '-'}</p>
                       </div>
                       <div className="flex gap-2">
@@ -649,8 +763,8 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
                   <p className="text-sm font-medium text-slate-900 mt-1">{form.full_name || '-'}</p>
                 </div>
                 <div className="bg-slate-100 border border-slate-300 rounded-lg p-3">
-                  <p className="text-xs text-slate-500">CPF</p>
-                  <p className="text-sm font-medium text-slate-900 mt-1">{form.cpf || '-'}</p>
+                  <p className="text-xs text-slate-500">{form.cnpj ? 'CNPJ' : 'CPF'}</p>
+                  <p className="text-sm font-medium text-slate-900 mt-1">{form.cnpj || form.cpf || '-'}</p>
                 </div>
                 <div className="bg-slate-100 border border-slate-300 rounded-lg p-3">
                   <p className="text-xs text-slate-500">Telefone</p>
@@ -658,14 +772,7 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
                 </div>
                 <div className="md:col-span-3 bg-slate-100 border border-slate-300 rounded-lg p-3">
                   <p className="text-xs text-slate-500">Endereço</p>
-                  <p className="text-sm font-medium text-slate-900 mt-1">
-                    {form.street || '-'}
-                    {form.address_number ? `, ${form.address_number}` : ''}
-                    {form.neighborhood ? ` - ${form.neighborhood}` : ''}
-                    {form.city ? ` - ${form.city}` : ''}
-                    {form.state ? `/${form.state}` : ''}
-                    {form.zip_code ? ` (${form.zip_code})` : ''}
-                  </p>
+                  <p className="text-sm font-medium text-slate-900 mt-1 whitespace-normal break-words">{formattedAddress}</p>
                 </div>
               </div>
             </div>
@@ -684,14 +791,50 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">CPF</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Tipo de documento</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                      documentType === 'cpf'
+                        ? 'border-slate-900 bg-slate-900 text-white'
+                        : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+                    }`}
+                    onClick={() => {
+                      setDocumentType('cpf');
+                      setForm((prev) => ({ ...prev, cnpj: '' }));
+                    }}
+                    disabled={saving}
+                  >
+                    Pessoa Física (CPF)
+                  </button>
+                  <button
+                    type="button"
+                    className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                      documentType === 'cnpj'
+                        ? 'border-slate-900 bg-slate-900 text-white'
+                        : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+                    }`}
+                    onClick={() => {
+                      setDocumentType('cnpj');
+                      setForm((prev) => ({ ...prev, cpf: '' }));
+                    }}
+                    disabled={saving}
+                  >
+                    Pessoa Jurídica (CNPJ)
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{documentType === 'cpf' ? 'CPF' : 'CNPJ'}</label>
                 <input
                   type="text"
-                  value={form.cpf}
-                  onChange={handleFormChange('cpf')}
+                  value={documentType === 'cpf' ? form.cpf : form.cnpj}
+                  onChange={handleFormChange(documentType === 'cpf' ? 'cpf' : 'cnpj')}
                   className={inputBaseClass}
                   disabled={saving}
-                  placeholder="000.000.000-00"
+                  placeholder={documentType === 'cpf' ? '000.000.000-00' : '00.000.000/0000-00'}
                   required
                 />
               </div>
@@ -899,14 +1042,38 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
                                   </td>
                                   <td className="px-3 py-2 text-right">
                                     {sale.payment_status === 'pending' ? (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleSettleSale(sale.sale_id)}
-                                        disabled={settlingSaleId === sale.sale_id}
-                                        className="text-xs bg-slate-900 text-white rounded px-3 py-1 hover:bg-slate-800 disabled:opacity-60"
-                                      >
-                                        {settlingSaleId === sale.sale_id ? 'Baixando...' : 'Dar baixa'}
-                                      </button>
+                                      <div className="flex items-center justify-end gap-2">
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          step="0.01"
+                                          value={abatementValues[sale.sale_id] ?? ''}
+                                          onChange={(event) =>
+                                            setAbatementValues((prev) => ({
+                                              ...prev,
+                                              [sale.sale_id]: event.target.value,
+                                            }))
+                                          }
+                                          className="w-24 border border-gray-200 rounded px-2 py-1 text-xs text-right hide-spin"
+                                          placeholder="Abater"
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => handleApplyAbatement(sale.sale_id)}
+                                          disabled={settlingSaleId === sale.sale_id}
+                                          className="text-xs bg-slate-900 text-white rounded px-3 py-1 hover:bg-slate-800 disabled:opacity-60"
+                                        >
+                                          Abater
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleSettleSale(sale.sale_id)}
+                                          disabled={settlingSaleId === sale.sale_id}
+                                          className="text-xs bg-emerald-600 text-white rounded px-3 py-1 hover:bg-emerald-700 disabled:opacity-60"
+                                        >
+                                          {settlingSaleId === sale.sale_id ? 'Baixando...' : 'Quitar'}
+                                        </button>
+                                      </div>
                                     ) : (
                                       <span className="text-xs text-slate-400">
                                         {sale.paid_at
