@@ -8,6 +8,8 @@ interface SaleDetail {
   id: number;
   total: number;
   created_at: string;
+  payment_status?: 'paid' | 'pending';
+  paid_at?: string | null;
   customer_id?: number | null;
   users?: {
     name: string | null;
@@ -15,7 +17,8 @@ interface SaleDetail {
   };
   customers?: {
     full_name: string;
-    cpf: string;
+    cpf: string | null;
+    cnpj: string | null;
     phone: string | null;
   } | null;
   sale_items: Array<{
@@ -128,6 +131,8 @@ const SalesHistory: React.FC = () => {
         id, 
         total, 
         created_at,
+        payment_status,
+        paid_at,
         user_id,
         customer_id,
         sale_items!fk_sale_items_sale_id (
@@ -162,7 +167,7 @@ const SalesHistory: React.FC = () => {
           if (sale.customer_id) {
             const { data } = await supabase
               .from('customers')
-              .select('full_name, cpf, phone')
+              .select('full_name, cpf, cnpj, phone')
               .eq('id', sale.customer_id)
               .maybeSingle();
             customerData = data ?? null;
@@ -229,6 +234,7 @@ const SalesHistory: React.FC = () => {
                   <th className="px-4 py-3 tracking-wider">ID</th>
                   <th className="px-4 py-3 tracking-wider">Data</th>
                   <th className="px-4 py-3 tracking-wider">Cliente</th>
+                  <th className="px-4 py-3 tracking-wider">Status</th>
                   <th className="px-4 py-3 tracking-wider text-right">Total</th>
                   <th className="px-4 py-3 tracking-wider text-center">Ações</th>
                 </tr>
@@ -243,6 +249,17 @@ const SalesHistory: React.FC = () => {
                     </td>
                     <td className="px-4 py-3 text-sm text-slate-600">
                       {sale.customers?.full_name || 'Não informado'}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-600">
+                      <span
+                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                          sale.payment_status === 'pending'
+                            ? 'bg-amber-100 text-amber-700'
+                            : 'bg-emerald-100 text-emerald-700'
+                        }`}
+                      >
+                        {sale.payment_status === 'pending' ? 'A prazo' : 'À vista'}
+                      </span>
                     </td>
                     <td className="px-4 py-3 text-right text-sm font-semibold text-slate-900">
                       R$ {parseFloat(sale.total.toString()).toFixed(2)}
@@ -304,9 +321,9 @@ const SalesHistory: React.FC = () => {
                   <p className="text-sm font-semibold text-slate-900">
                     {selectedSale.customers?.full_name || 'Não informado'}
                   </p>
-                  {selectedSale.customers?.cpf && (
+                  {(selectedSale.customers?.cpf || selectedSale.customers?.cnpj) && (
                     <p className="text-xs text-slate-400">
-                      CPF: {selectedSale.customers.cpf}
+                      {selectedSale.customers?.cnpj ? 'CNPJ' : 'CPF'}: {selectedSale.customers?.cnpj || selectedSale.customers?.cpf}
                       {selectedSale.customers.phone ? ` - Tel: ${selectedSale.customers.phone}` : ''}
                     </p>
                   )}
@@ -720,7 +737,7 @@ const SalesHistory: React.FC = () => {
                           if (updatedSale.customer_id) {
                             const { data } = await supabase
                               .from('customers')
-                              .select('full_name, cpf, phone')
+                              .select('full_name, cpf, cnpj, phone')
                               .eq('id', updatedSale.customer_id)
                               .maybeSingle();
                             customerData = data ?? null;

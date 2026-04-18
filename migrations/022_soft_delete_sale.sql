@@ -1,4 +1,4 @@
--- Migration 00: Soft delete de venda e itens relacionados
+-- Migration 22: Soft delete de venda e itens relacionados
 -- Este script faz soft delete em sales, sale_items e stock_audit relacionados a uma venda
 -- Uso: substitua :sale_id pelo id da venda a ser excluída
 

@@ -38,8 +38,12 @@ interface CartItem {
 interface CustomerOption {
   id: number;
   full_name: string;
-  cpf: string;
+  cpf: string | null;
+  cnpj: string | null;
   phone: string | null;
+  street: string | null;
+  address_number: string | null;
+  neighborhood: string | null;
 }
 
 const PDV: React.FC = () => {
@@ -70,6 +74,10 @@ const PDV: React.FC = () => {
   const [customerSearch, setCustomerSearch] = useState('');
   const [loadingCustomers, setLoadingCustomers] = useState(false);
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const [activeCustomerIndex, setActiveCustomerIndex] = useState(0);
+  const [customerPickerExpanded, setCustomerPickerExpanded] = useState(false);
+  const [markAsPendingPayment, setMarkAsPendingPayment] = useState(false);
+  const [paidNowValue, setPaidNowValue] = useState('0');
 
   // Cálculo de totais (deve vir antes de hooks que dependem deles)
   const total = React.useMemo(() => cart.reduce((sum, item) => sum + item.subtotal, 0), [cart]);
@@ -77,6 +85,8 @@ const PDV: React.FC = () => {
   const subtotal = total + desconto;
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const customerInputRef = useRef<HTMLInputElement>(null);
+  const customerSelectorRef = useRef<HTMLDivElement>(null);
   // Filtrar produtos localmente (mesma lógica da rota /produtos)
   const filteredProducts = products
     .filter(p => {
@@ -89,20 +99,33 @@ const PDV: React.FC = () => {
       );
     })
     .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
+  const customerSearchTerm = customerSearch.trim().toLowerCase();
   const filteredCustomers = customers
     .filter((customer) => {
-      const selectedLabel = selectedCustomer
-        ? `${selectedCustomer.full_name} - ${selectedCustomer.cpf}`.toLowerCase()
-        : '';
-      const rawTerm = customerSearch.trim().toLowerCase();
-      const term = selectedCustomer && rawTerm === selectedLabel ? '' : rawTerm;
+      if (!customerSearchTerm) return true;
       return (
-        customer.full_name.toLowerCase().includes(term) ||
-        customer.cpf.toLowerCase().includes(term) ||
-        (customer.phone ?? '').toLowerCase().includes(term)
+        customer.full_name.toLowerCase().includes(customerSearchTerm) ||
+        (customer.cpf ?? '').toLowerCase().includes(customerSearchTerm) ||
+        (customer.cnpj ?? '').toLowerCase().includes(customerSearchTerm) ||
+        (customer.phone ?? '').toLowerCase().includes(customerSearchTerm)
       );
     })
     .slice(0, 12);
+
+  const getCustomerDocumentValue = (customer: CustomerOption) => customer.cnpj || customer.cpf || '-';
+  const getCustomerDocumentLabel = (customer: CustomerOption) => (customer.cnpj ? 'CNPJ' : 'CPF');
+
+  const formatCustomerShortLabel = (customer: CustomerOption) =>
+    `${customer.full_name} • ${getCustomerDocumentValue(customer)}`;
+
+  const selectCustomer = (customer: CustomerOption) => {
+    setSelectedCustomer(customer);
+    setCustomerSearch('');
+    setShowCustomerDropdown(false);
+    setCustomerPickerExpanded(false);
+    setActiveCustomerIndex(0);
+    setError(null);
+  };
   // Estado para navegação por teclado no carrinho
   const [selectedCartIndex, setSelectedCartIndex] = useState<number>(-1);
   // Estado para navegação por teclado na lista de produtos filtrados
@@ -223,7 +246,7 @@ const PDV: React.FC = () => {
     setLoadingCustomers(true);
     supabase
       .from('customers')
-      .select('id, full_name, cpf, phone')
+      .select('id, full_name, cpf, cnpj, phone, street, address_number, neighborhood')
       .order('full_name', { ascending: true })
       .then(({ data, error }) => {
         if (error) {
@@ -235,6 +258,73 @@ const PDV: React.FC = () => {
         setLoadingCustomers(false);
       });
   }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!customerSelectorRef.current) return;
+      if (!customerSelectorRef.current.contains(event.target as Node)) {
+        setShowCustomerDropdown(false);
+        setCustomerPickerExpanded(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    setActiveCustomerIndex(0);
+  }, [customerSearchTerm, showCustomerDropdown]);
+
+  useEffect(() => {
+    if (markAsPendingPayment && !selectedCustomer) {
+      setCustomerPickerExpanded(true);
+      setShowCustomerDropdown(true);
+      setTimeout(() => customerInputRef.current?.focus(), 0);
+    }
+  }, [markAsPendingPayment, selectedCustomer]);
+
+  const handleCustomerSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showCustomerDropdown) {
+      if (event.key === 'ArrowDown' || event.key === 'Enter') {
+        setShowCustomerDropdown(true);
+      }
+      return;
+    }
+
+    if (filteredCustomers.length === 0) {
+      if (event.key === 'Escape') {
+        setShowCustomerDropdown(false);
+      }
+      return;
+    }
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setActiveCustomerIndex((prev) => (prev < filteredCustomers.length - 1 ? prev + 1 : 0));
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setActiveCustomerIndex((prev) => (prev > 0 ? prev - 1 : filteredCustomers.length - 1));
+      return;
+    }
+
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      const customer = filteredCustomers[activeCustomerIndex];
+      if (customer) {
+        selectCustomer(customer);
+      }
+      return;
+    }
+
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      setShowCustomerDropdown(false);
+    }
+  };
 
   // Salvar carrinho no localStorage sempre que mudar
   useEffect(() => {
@@ -426,15 +516,45 @@ const PDV: React.FC = () => {
       setError('Usuário não autenticado');
       return;
     }
+
+    if (markAsPendingPayment && !selectedCustomer) {
+      setError('Selecione um cliente para marcar a venda como pagamento posterior.');
+      return;
+    }
+
+    const paidNowParsed = Number(markAsPendingPayment ? paidNowValue.replace(',', '.') : total);
+    const paidAmount = Number.isFinite(paidNowParsed) ? paidNowParsed : 0;
+
+    if (paidAmount < 0) {
+      setError('O valor pago não pode ser negativo.');
+      return;
+    }
+
+    if (paidAmount > total) {
+      setError('O valor pago não pode ser maior que o total da venda.');
+      return;
+    }
+
     // Finalização direta da venda
     setFinalizing(true);
     setError(null);
     setSuccess(null);
     try {
       // 1. Inserir sale
+      const paymentStatus = markAsPendingPayment && paidAmount < total ? 'pending' : 'paid';
       const { data: sale, error: saleError } = await supabase
         .from('sales')
-        .insert([{ total, user_id: user.id, customer_id: selectedCustomer?.id ?? null }])
+        .insert([
+          {
+            total,
+            user_id: user.id,
+            customer_id: selectedCustomer?.id ?? null,
+            payment_status: paymentStatus,
+            marked_at: paymentStatus === 'pending' ? new Date().toISOString() : null,
+            paid_at: paymentStatus === 'paid' ? new Date().toISOString() : null,
+            paid_amount: paymentStatus === 'paid' ? total : paidAmount,
+          },
+        ])
         .select('id')
         .single();
       
@@ -484,28 +604,79 @@ const PDV: React.FC = () => {
       
       // Usar o ID real da venda (gerado pelo banco)
       setSaleId(sale.id);
-      setSuccess(`Pedido #${sale.id} registrado com sucesso!`);
+      setSuccess(
+        paymentStatus === 'pending'
+          ? `Pedido #${sale.id} registrado a prazo. Restante: R$ ${(total - paidAmount).toFixed(2)}`
+          : `Pedido #${sale.id} registrado à vista com sucesso!`
+      );
       setCart([]);
       setSelectedCustomer(null);
       setCustomerSearch('');
       setShowCustomerDropdown(false);
+      setMarkAsPendingPayment(false);
+      setPaidNowValue('0');
       localStorage.removeItem('pdv_cart');
         // Chamar endpoint de impressão
         try {
-          await fetch('http://localhost:4000/api/print', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              items: cart.map(item => ({
-                name: item.name,
-                qty: item.quantity,
-                price: item.price_sale
-              })),
-              total,
-              payment: 'N/A', // Adapte conforme necessário
-              company: { name: 'AutoColor' }
-            })
-          });
+          const printItems = cart.map(item => ({
+            name: item.name,
+            custom_name: item.name,
+            qty: item.quantity,
+            price: item.price_sale
+          }));
+
+          const printCustomer = selectedCustomer
+            ? {
+                full_name: selectedCustomer.full_name,
+                street: selectedCustomer.street,
+                address_number: selectedCustomer.address_number,
+                neighborhood: selectedCustomer.neighborhood,
+              }
+            : null;
+
+          if (paymentStatus === 'pending' && printCustomer) {
+            await fetch('http://localhost:4000/api/print', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                items: printItems,
+                total,
+                payment: 'A prazo',
+                saleType: 'a_prazo',
+                receiptType: 'customer',
+                customer: printCustomer,
+                company: { name: 'AutoColor' }
+              })
+            });
+
+            await fetch('http://localhost:4000/api/print', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                items: printItems,
+                total,
+                payment: 'A prazo',
+                saleType: 'a_prazo',
+                receiptType: 'owner',
+                customer: printCustomer,
+                company: { name: 'AutoColor' }
+              })
+            });
+          } else {
+            await fetch('http://localhost:4000/api/print', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                items: printItems,
+                total,
+                payment: 'À vista',
+                saleType: 'a_vista',
+                receiptType: 'default',
+                customer: printCustomer,
+                company: { name: 'AutoColor' }
+              })
+            });
+          }
         } catch (err) {
           console.error('Erro ao imprimir recibo:', err);
         }
@@ -942,74 +1113,170 @@ const PDV: React.FC = () => {
             </div>
             {error && <div className="text-red-600 text-center mt-2">{error}</div>}
             {success && <div className="text-green-600 text-center mt-2">{success}</div>}
-            <div className="flex flex-col gap-2 mt-2 relative">
-              <label className="text-sm text-gray-600">Cliente da venda</label>
-              <input
-                type="text"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-200"
-                placeholder="Buscar cliente por nome, CPF ou telefone..."
-                value={customerSearch}
-                onChange={(e) => {
-                  setCustomerSearch(e.target.value);
-                  setShowCustomerDropdown(true);
-                }}
-                onFocus={() => setShowCustomerDropdown(true)}
-                onBlur={() => {
-                  setTimeout(() => setShowCustomerDropdown(false), 120);
-                }}
+            <div className="flex flex-col gap-2 mt-2" ref={customerSelectorRef}>
+              <label className="text-sm font-medium text-gray-700">Cliente da venda</label>
+
+              <button
+                type="button"
                 disabled={finalizing || loadingCustomers}
-              />
-              {showCustomerDropdown && (
-                <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 max-h-52 overflow-y-auto">
-                  {loadingCustomers ? (
-                    <div className="px-3 py-3 text-sm text-slate-400">Carregando clientes...</div>
-                  ) : filteredCustomers.length > 0 ? (
-                    filteredCustomers.map((customer) => (
+                onClick={() => {
+                  setCustomerPickerExpanded((prev) => {
+                    const nextState = !prev;
+                    setShowCustomerDropdown(nextState);
+                    if (nextState) {
+                      setTimeout(() => customerInputRef.current?.focus(), 0);
+                    }
+                    return nextState;
+                  });
+                }}
+                className={`w-full rounded-xl border px-3 py-3 text-left transition ${
+                  selectedCustomer
+                    ? 'border-indigo-300 bg-indigo-50 hover:bg-indigo-100'
+                    : 'border-gray-300 bg-white hover:bg-slate-50'
+                } disabled:opacity-60`}
+              >
+                {selectedCustomer ? (
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-slate-900 truncate">{selectedCustomer.full_name}</p>
+                      <p className="text-xs text-slate-600">
+                        {getCustomerDocumentLabel(selectedCustomer)}: {getCustomerDocumentValue(selectedCustomer)}
+                      </p>
+                      <p className="text-xs text-slate-500 truncate">
+                        {selectedCustomer.phone ? `Telefone: ${selectedCustomer.phone}` : 'Sem telefone cadastrado'}
+                      </p>
+                    </div>
+                    <span className="text-[11px] bg-indigo-100 text-indigo-700 rounded-full px-2 py-0.5 font-medium">Selecionado</span>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">Selecionar cliente</p>
+                    <p className="text-xs text-slate-500 mt-0.5">Busca por nome, CPF/CNPJ ou telefone</p>
+                  </div>
+                )}
+              </button>
+
+              {!selectedCustomer && !customerPickerExpanded && (
+                <p className="text-xs text-slate-500">Venda sem cliente vinculado (opcional para pagamento à vista).</p>
+              )}
+
+              {customerPickerExpanded && (
+                <div className="border border-slate-200 rounded-xl bg-slate-50 p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      ref={customerInputRef}
+                      type="text"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-base bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
+                      placeholder="Digite nome, CPF/CNPJ ou telefone..."
+                      value={customerSearch}
+                      onChange={(e) => {
+                        setCustomerSearch(e.target.value);
+                        setShowCustomerDropdown(true);
+                      }}
+                      onFocus={() => setShowCustomerDropdown(true)}
+                      onKeyDown={handleCustomerSearchKeyDown}
+                      disabled={finalizing || loadingCustomers}
+                    />
+                    {selectedCustomer && (
                       <button
-                        key={customer.id}
                         type="button"
-                        className="w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0"
-                        onMouseDown={(event) => event.preventDefault()}
+                        className="text-xs text-red-500 hover:text-red-700"
                         onClick={() => {
-                          setSelectedCustomer(customer);
-                          setCustomerSearch(`${customer.full_name} - ${customer.cpf}`);
-                          setShowCustomerDropdown(false);
+                          setSelectedCustomer(null);
+                          setCustomerSearch('');
+                          setShowCustomerDropdown(true);
+                          setTimeout(() => customerInputRef.current?.focus(), 0);
                         }}
                       >
-                        <p className="text-sm font-medium text-slate-900">{customer.full_name}</p>
-                        <p className="text-xs text-slate-500">
-                          {customer.cpf}
-                          {customer.phone ? ` - ${customer.phone}` : ''}
-                        </p>
+                        Remover
                       </button>
-                    ))
-                  ) : customers.length === 0 ? (
-                    <div className="px-3 py-3 text-sm text-slate-400">Nenhum cliente cadastrado.</div>
-                  ) : (
-                    <div className="px-3 py-3 text-sm text-slate-400">Nenhum cliente encontrado.</div>
+                    )}
+                  </div>
+
+                  {showCustomerDropdown && (
+                    <div className="bg-white border border-gray-200 rounded-lg shadow-sm max-h-64 overflow-y-auto">
+                      {loadingCustomers ? (
+                        <div className="px-3 py-3 text-sm text-slate-400">Carregando clientes...</div>
+                      ) : filteredCustomers.length > 0 ? (
+                        filteredCustomers.map((customer, index) => {
+                          const isActive = index === activeCustomerIndex;
+                          const isSelected = selectedCustomer?.id === customer.id;
+
+                          return (
+                            <button
+                              key={customer.id}
+                              type="button"
+                              className={`w-full text-left px-3 py-3 transition-colors border-b border-gray-100 last:border-b-0 ${
+                                isActive ? 'bg-blue-50' : 'hover:bg-blue-50'
+                              }`}
+                              onMouseEnter={() => setActiveCustomerIndex(index)}
+                              onMouseDown={(event) => event.preventDefault()}
+                              onClick={() => selectCustomer(customer)}
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="text-sm font-semibold text-slate-900 truncate">{customer.full_name}</p>
+                                {isSelected && (
+                                  <span className="text-[11px] text-indigo-700 bg-indigo-100 rounded px-2 py-0.5">Selecionado</span>
+                                )}
+                              </div>
+                              <p className="text-xs text-slate-500 mt-0.5">{formatCustomerShortLabel(customer)}</p>
+                              <p className="text-xs text-slate-400 mt-0.5">{customer.phone || 'Sem telefone'}</p>
+                            </button>
+                          );
+                        })
+                      ) : customers.length === 0 ? (
+                        <div className="px-3 py-3 text-sm text-slate-400">Nenhum cliente cadastrado.</div>
+                      ) : (
+                        <div className="px-3 py-3 text-sm text-slate-400">Nenhum cliente encontrado para essa busca.</div>
+                      )}
+                    </div>
                   )}
                 </div>
               )}
-              {selectedCustomer && (
-                <div className="mt-1 flex items-center justify-between gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-slate-900 truncate">{selectedCustomer.full_name}</p>
-                    <p className="text-xs text-slate-500">
-                      {selectedCustomer.cpf}
-                      {selectedCustomer.phone ? ` - ${selectedCustomer.phone}` : ''}
-                    </p>
+
+              <label className="mt-2 flex items-start gap-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={markAsPendingPayment}
+                  onChange={(event) => {
+                    setMarkAsPendingPayment(event.target.checked);
+                    if (event.target.checked && !selectedCustomer) {
+                      setError('Para marcar a venda, selecione um cliente.');
+                    } else {
+                      setError(null);
+                    }
+                    if (!event.target.checked) {
+                      setPaidNowValue('0');
+                    }
+                  }}
+                  disabled={finalizing}
+                />
+                <span>Marcar venda para cliente pagar depois</span>
+              </label>
+              {markAsPendingPayment && !selectedCustomer && (
+                <p className="text-xs text-amber-600">
+                  Selecione um cliente para concluir a venda marcada.
+                </p>
+              )}
+              {markAsPendingPayment && (
+                <>
+                  <div className="mt-1">
+                    <label className="text-xs text-gray-600">Valor pago agora (entrada)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={paidNowValue}
+                      onChange={(event) => setPaidNowValue(event.target.value)}
+                      className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 hide-spin"
+                      disabled={finalizing}
+                    />
                   </div>
-                  <button
-                    type="button"
-                    className="text-xs text-red-500 hover:text-red-700"
-                    onClick={() => {
-                      setSelectedCustomer(null);
-                      setCustomerSearch('');
-                    }}
-                  >
-                    Remover
-                  </button>
-                </div>
+                  <p className="text-xs text-slate-500">
+                    Restante a prazo: R$ {Math.max(0, total - (Number(paidNowValue.replace(',', '.')) || 0)).toFixed(2)}
+                  </p>
+                </>
               )}
             </div>
             <button
@@ -1017,7 +1284,11 @@ const PDV: React.FC = () => {
               onClick={finalizeSale}
               disabled={finalizing || cart.length === 0}
             >
-              {finalizing ? 'Registrando...' : 'Finalizar Venda →'}
+              {finalizing
+                ? 'Registrando...'
+                : markAsPendingPayment
+                  ? 'Marcar Venda para Depois →'
+                  : 'Finalizar Venda →'}
             </button>
           </div>
             </div>

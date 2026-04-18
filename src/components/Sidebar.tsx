@@ -22,33 +22,38 @@ const Sidebar: React.FC<SidebarProps> = ({ onOpenChange }) => {
   // const [isAdmin, setIsAdmin] = React.useState(false); // Removido pois não está em uso
   const sidebarRef = React.useRef<HTMLDivElement>(null);
 
-  // --- INÍCIO: Lógica de admin/role comentada ---
-  // React.useEffect(() => {
-  //   const loadRole = async () => {
-  //     if (!user) {
-  //       return;
-  //     }
-  //
-  //     const { data, error } = await supabase
-  //       .from('users')
-  //       .select('role')
-  //       .eq('id', user.id)
-  //       .maybeSingle();
-  //
-  //     if (error) {
-  //       console.error('Erro ao carregar role no menu lateral:', error);
-  //       return;
-  //     }
-  //
-  //     // setIsAdmin(data?.role === 'admin');
-  //   };
-  //
-  //   loadRole();
-  // }, [user]);
-  // --- FIM: Lógica de admin/role comentada ---
+  React.useEffect(() => {
+    const loadRole = async () => {
+      if (!user) {
+        setIsAdmin(false);
+        return;
+      }
 
-  // Esconde temporariamente o botão Clientes da sidebar
-  const navItems = baseNavItems;
+      const { data, error } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Erro ao carregar role no menu lateral:', error);
+        setIsAdmin(false);
+        return;
+      }
+
+      setIsAdmin(data?.role === 'admin');
+    };
+
+    loadRole();
+  }, [user]);
+
+  const navItems = isAdmin
+    ? [
+        ...baseNavItems,
+        { to: '/vendas-marcadas', icon: 'solar:bill-list-linear', label: 'Vendas a Prazo' },
+        { to: '/clientes', icon: 'solar:users-group-two-rounded-linear', label: 'Clientes' },
+      ]
+    : baseNavItems;
 
   // Mouse enter/leave para abrir/fechar
   const handleMouseEnter = () => {
