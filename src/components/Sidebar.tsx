@@ -48,7 +48,11 @@ const Sidebar: React.FC<SidebarProps> = ({ onOpenChange }) => {
   }, [user]);
 
   const navItems = isAdmin
-    ? [...baseNavItems, { to: '/clientes', icon: 'solar:users-group-two-rounded-linear', label: 'Clientes' }]
+    ? [
+        ...baseNavItems,
+        { to: '/vendas-marcadas', icon: 'solar:bill-list-linear', label: 'Vendas Marcadas' },
+        { to: '/clientes', icon: 'solar:users-group-two-rounded-linear', label: 'Clientes' },
+      ]
     : baseNavItems;
 
   // Mouse enter/leave para abrir/fechar

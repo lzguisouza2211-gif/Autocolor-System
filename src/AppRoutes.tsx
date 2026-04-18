@@ -11,6 +11,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import PDV from './components/PDV';
 import SalesHistory from './components/SalesHistory';
 import Customers from './components/Customers';
+import MarkedSales from './components/MarkedSales';
 import { supabase } from './supabase';
 import './App.css';
 
@@ -196,7 +197,47 @@ function App() {
             element={
               <AdminRoute>
                 <MainLayout>
-                  <Customers />
+                  <Customers pageMode="list" />
+                </MainLayout>
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/clientes/novo"
+            element={
+              <AdminRoute>
+                <MainLayout>
+                  <Customers pageMode="create" />
+                </MainLayout>
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/clientes/:id"
+            element={
+              <AdminRoute>
+                <MainLayout>
+                  <Customers pageMode="view" />
+                </MainLayout>
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/clientes/:id/editar"
+            element={
+              <AdminRoute>
+                <MainLayout>
+                  <Customers pageMode="edit" />
+                </MainLayout>
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/vendas-marcadas"
+            element={
+              <AdminRoute>
+                <MainLayout>
+                  <MarkedSales />
                 </MainLayout>
               </AdminRoute>
             }

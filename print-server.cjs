@@ -11,13 +11,13 @@ app.use(cors()); // Permite requisições do frontend
 app.use(express.json());
 
 /**Formata e imprime o recibo usando escpos*/
-async function printReceipt(items, total, payment, company) {
+async function printReceipt(items, total, payment, company, receiptType, saleType, customer) {
   // Para Windows, detecta se impressora está como USB ou Serial (COM)
   if (isWindows) {
     try {
       // Gera recibo em arquivo texto
-      const receiptText = formatReceiptAsText(items, total, payment, company);
-      const filePath = 'recibo-print.txt';
+      const receiptText = formatReceiptAsText(items, total, payment, company, receiptType, saleType, customer);
+      const filePath = `recibo-print-${receiptType || 'default'}.txt`;
       fs.writeFileSync(filePath, receiptText);
       // Executa comando para enviar arquivo para impressora
       const { exec } = require('child_process');
@@ -31,7 +31,7 @@ async function printReceipt(items, total, payment, company) {
       return { success: true, message: 'Recibo enviado para impressora via comando copy' };
     } catch (error) {
       console.error('❌ Erro ao imprimir:', error.message);
-      const receiptText = formatReceiptAsText(items, total, payment, company);
+      const receiptText = formatReceiptAsText(items, total, payment, company, receiptType, saleType, customer);
       fs.writeFileSync('recibo-erro.txt', receiptText);
       throw error;
     }
@@ -41,17 +41,41 @@ async function printReceipt(items, total, payment, company) {
 /**
  * Função auxiliar para formatar recibo como texto simples (fallback)
  */
-function formatReceiptAsText(items, total, payment, company) {
+function formatReceiptAsText(items, total, payment, company, receiptType, saleType, customer) {
   const now = new Date();
   const dataHora = `${now.toLocaleDateString('pt-BR')} ${now.toLocaleTimeString('pt-BR')}`;
+
+  const safeCustomerName = customer?.full_name || 'Não informado';
+  const safeStreet = customer?.street || '';
+  const safeNumber = customer?.address_number || '';
+  const safeNeighborhood = customer?.neighborhood || '';
+  const isPrazo = saleType === 'a_prazo';
+  const title = receiptType === 'owner'
+    ? '   Comprovante da Loja   '
+    : receiptType === 'customer'
+      ? '  Comprovante do Cliente '
+      : '      Recibo de Venda    ';
   
   let receipt = '\n';
   receipt += '========================================\n';
   receipt += `        ${company?.name || 'AutoColor'}        \n`;
   receipt += '========================================\n';
-  receipt += '           Recibo de Venda           \n';
+  receipt += `${title}\n`;
+  if (isPrazo) {
+    receipt += '             VENDA A PRAZO            \n';
+  }
   receipt += `${dataHora}\n`;
   receipt += '----------------------------------------\n\n';
+
+  receipt += `Cliente: ${safeCustomerName}\n`;
+
+  if (receiptType === 'owner') {
+    receipt += `Rua: ${safeStreet || '-'}\n`;
+    receipt += `Numero: ${safeNumber || '-'}\n`;
+    receipt += `Bairro: ${safeNeighborhood || '-'}\n`;
+  }
+
+  receipt += '\n';
   
   if (items && items.length > 0) {
     items.forEach(item => {
@@ -63,10 +87,14 @@ function formatReceiptAsText(items, total, payment, company) {
       receipt += itemName + ' '.repeat(Math.max(1, spaces)) + itemPrice + '\n';
     });
   }
-  
+
   receipt += '\n----------------------------------------\n';
-  receipt += `           TOTAL: R$ ${Number(total).toFixed(2)}           \n`;
-  receipt += `        Pagamento: ${payment}        \n`;
+
+  if (receiptType !== 'customer') {
+    receipt += `           TOTAL: R$ ${Number(total).toFixed(2)}           \n`;
+    receipt += `        Pagamento: ${payment}        \n`;
+  }
+
   receipt += '----------------------------------------\n\n';
   receipt += 'Assinatura: ____________________________\n\n';
   receipt += '     Obrigado pela preferencia!     \n\n\n\n\n';
@@ -75,20 +103,21 @@ function formatReceiptAsText(items, total, payment, company) {
 }
 
 app.post('/api/print', async (req, res) => {
-  const { items, total, payment, company } = req.body;
+  const { items, total, payment, company, receiptType, saleType, customer } = req.body;
 
   // Modo teste no Linux - salva em arquivo
   if (isLinux) {
-    const receiptText = formatReceiptAsText(items, total, payment, company);
-    fs.writeFileSync('recibo-teste.txt', receiptText);
-    console.log('✅ Recibo salvo em recibo-teste.txt (modo teste Linux)');
-    return res.json({ success: true, message: 'Recibo gerado (teste)', file: 'recibo-teste.txt' });
+    const receiptText = formatReceiptAsText(items, total, payment, company, receiptType, saleType, customer);
+    const fileName = `recibo-teste-${receiptType || 'default'}.txt`;
+    fs.writeFileSync(fileName, receiptText);
+    console.log(`✅ Recibo salvo em ${fileName} (modo teste Linux)`);
+    return res.json({ success: true, message: 'Recibo gerado (teste)', file: fileName });
   }
 
   // Impressão no Windows com USB
   if (isWindows) {
     try {
-      const result = await printReceipt(items, total, payment, company);
+      const result = await printReceipt(items, total, payment, company, receiptType, saleType, customer);
       res.json(result);
     } catch (err) {
       console.error('❌ Erro ao imprimir:', err.message);

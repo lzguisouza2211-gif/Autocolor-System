@@ -40,6 +40,9 @@ interface CustomerOption {
   full_name: string;
   cpf: string;
   phone: string | null;
+  street: string | null;
+  address_number: string | null;
+  neighborhood: string | null;
 }
 
 const PDV: React.FC = () => {
@@ -70,6 +73,8 @@ const PDV: React.FC = () => {
   const [customerSearch, setCustomerSearch] = useState('');
   const [loadingCustomers, setLoadingCustomers] = useState(false);
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const [markAsPendingPayment, setMarkAsPendingPayment] = useState(false);
+  const [paidNowValue, setPaidNowValue] = useState('0');
 
   // Cálculo de totais (deve vir antes de hooks que dependem deles)
   const total = React.useMemo(() => cart.reduce((sum, item) => sum + item.subtotal, 0), [cart]);
@@ -223,7 +228,7 @@ const PDV: React.FC = () => {
     setLoadingCustomers(true);
     supabase
       .from('customers')
-      .select('id, full_name, cpf, phone')
+      .select('id, full_name, cpf, phone, street, address_number, neighborhood')
       .order('full_name', { ascending: true })
       .then(({ data, error }) => {
         if (error) {
@@ -426,15 +431,45 @@ const PDV: React.FC = () => {
       setError('Usuário não autenticado');
       return;
     }
+
+    if (markAsPendingPayment && !selectedCustomer) {
+      setError('Selecione um cliente para marcar a venda como pagamento posterior.');
+      return;
+    }
+
+    const paidNowParsed = Number(markAsPendingPayment ? paidNowValue.replace(',', '.') : total);
+    const paidAmount = Number.isFinite(paidNowParsed) ? paidNowParsed : 0;
+
+    if (paidAmount < 0) {
+      setError('O valor pago não pode ser negativo.');
+      return;
+    }
+
+    if (paidAmount > total) {
+      setError('O valor pago não pode ser maior que o total da venda.');
+      return;
+    }
+
     // Finalização direta da venda
     setFinalizing(true);
     setError(null);
     setSuccess(null);
     try {
       // 1. Inserir sale
+      const paymentStatus = markAsPendingPayment && paidAmount < total ? 'pending' : 'paid';
       const { data: sale, error: saleError } = await supabase
         .from('sales')
-        .insert([{ total, user_id: user.id, customer_id: selectedCustomer?.id ?? null }])
+        .insert([
+          {
+            total,
+            user_id: user.id,
+            customer_id: selectedCustomer?.id ?? null,
+            payment_status: paymentStatus,
+            marked_at: paymentStatus === 'pending' ? new Date().toISOString() : null,
+            paid_at: paymentStatus === 'paid' ? new Date().toISOString() : null,
+            paid_amount: paymentStatus === 'paid' ? total : paidAmount,
+          },
+        ])
         .select('id')
         .single();
       
@@ -484,28 +519,79 @@ const PDV: React.FC = () => {
       
       // Usar o ID real da venda (gerado pelo banco)
       setSaleId(sale.id);
-      setSuccess(`Pedido #${sale.id} registrado com sucesso!`);
+      setSuccess(
+        paymentStatus === 'pending'
+          ? `Pedido #${sale.id} registrado a prazo. Restante: R$ ${(total - paidAmount).toFixed(2)}`
+          : `Pedido #${sale.id} registrado à vista com sucesso!`
+      );
       setCart([]);
       setSelectedCustomer(null);
       setCustomerSearch('');
       setShowCustomerDropdown(false);
+      setMarkAsPendingPayment(false);
+      setPaidNowValue('0');
       localStorage.removeItem('pdv_cart');
         // Chamar endpoint de impressão
         try {
-          await fetch('http://localhost:4000/api/print', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              items: cart.map(item => ({
-                name: item.name,
-                qty: item.quantity,
-                price: item.price_sale
-              })),
-              total,
-              payment: 'N/A', // Adapte conforme necessário
-              company: { name: 'AutoColor' }
-            })
-          });
+          const printItems = cart.map(item => ({
+            name: item.name,
+            custom_name: item.name,
+            qty: item.quantity,
+            price: item.price_sale
+          }));
+
+          const printCustomer = selectedCustomer
+            ? {
+                full_name: selectedCustomer.full_name,
+                street: selectedCustomer.street,
+                address_number: selectedCustomer.address_number,
+                neighborhood: selectedCustomer.neighborhood,
+              }
+            : null;
+
+          if (paymentStatus === 'pending' && printCustomer) {
+            await fetch('http://localhost:4000/api/print', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                items: printItems,
+                total,
+                payment: 'A prazo',
+                saleType: 'a_prazo',
+                receiptType: 'customer',
+                customer: printCustomer,
+                company: { name: 'AutoColor' }
+              })
+            });
+
+            await fetch('http://localhost:4000/api/print', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                items: printItems,
+                total,
+                payment: 'A prazo',
+                saleType: 'a_prazo',
+                receiptType: 'owner',
+                customer: printCustomer,
+                company: { name: 'AutoColor' }
+              })
+            });
+          } else {
+            await fetch('http://localhost:4000/api/print', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                items: printItems,
+                total,
+                payment: 'À vista',
+                saleType: 'a_vista',
+                receiptType: 'default',
+                customer: printCustomer,
+                company: { name: 'AutoColor' }
+              })
+            });
+          }
         } catch (err) {
           console.error('Erro ao imprimir recibo:', err);
         }
@@ -1011,13 +1097,62 @@ const PDV: React.FC = () => {
                   </button>
                 </div>
               )}
+
+              <label className="mt-2 flex items-start gap-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={markAsPendingPayment}
+                  onChange={(event) => {
+                    setMarkAsPendingPayment(event.target.checked);
+                    if (event.target.checked && !selectedCustomer) {
+                      setError('Para marcar a venda, selecione um cliente.');
+                    } else {
+                      setError(null);
+                    }
+                    if (!event.target.checked) {
+                      setPaidNowValue('0');
+                    }
+                  }}
+                  disabled={finalizing}
+                />
+                <span>Marcar venda para cliente pagar depois</span>
+              </label>
+              {markAsPendingPayment && !selectedCustomer && (
+                <p className="text-xs text-amber-600">
+                  Selecione um cliente para concluir a venda marcada.
+                </p>
+              )}
+              {markAsPendingPayment && (
+                <>
+                  <div className="mt-1">
+                    <label className="text-xs text-gray-600">Valor pago agora (entrada)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={paidNowValue}
+                      onChange={(event) => setPaidNowValue(event.target.value)}
+                      className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 hide-spin"
+                      disabled={finalizing}
+                    />
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    Restante a prazo: R$ {Math.max(0, total - (Number(paidNowValue.replace(',', '.')) || 0)).toFixed(2)}
+                  </p>
+                </>
+              )}
             </div>
             <button
               className="w-full bg-slate-900 text-white text-base font-semibold rounded-lg py-3 mt-4 shadow hover:bg-slate-800 transition"
               onClick={finalizeSale}
               disabled={finalizing || cart.length === 0}
             >
-              {finalizing ? 'Registrando...' : 'Finalizar Venda →'}
+              {finalizing
+                ? 'Registrando...'
+                : markAsPendingPayment
+                  ? 'Marcar Venda para Depois →'
+                  : 'Finalizar Venda →'}
             </button>
           </div>
             </div>

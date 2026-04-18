@@ -8,7 +8,7 @@ type MetricData = {
   totalProducts: number;
   totalSalesMonth: number;
   criticalStock: number;
-  totalClients: number;
+  markedSalesCount: number;
 };
 
 const badgeColors: Record<string, string> = {
@@ -25,7 +25,7 @@ const DashboardMetrics: React.FC = () => {
     totalProducts: 0,
     totalSalesMonth: 0,
     criticalStock: 0,
-    totalClients: 0,
+    markedSalesCount: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -49,9 +49,17 @@ const DashboardMetrics: React.FC = () => {
         .from('sales')
         .select('total')
         .gte('created_at', startOfMonth.toISOString())
+        .eq('payment_status', 'paid')
         .is('deleted_at', null);
 
       const totalSales = salesData?.reduce((sum, sale) => sum + Number(sale.total), 0) || 0;
+
+      const { data: markedSalesCountData, error: markedSalesCountError } = await supabase
+        .rpc('get_marked_sales_count');
+
+      if (markedSalesCountError) {
+        console.error('Erro ao buscar quantidade de vendas marcadas:', markedSalesCountError);
+      }
 
       // Produtos com estoque crítico (<=10)
       const { count: criticalCount } = await supabase
@@ -64,7 +72,7 @@ const DashboardMetrics: React.FC = () => {
         totalProducts: productsCount || 0,
         totalSalesMonth: totalSales,
         criticalStock: criticalCount || 0,
-        totalClients: 0, // Desabilitado - não há tabela de clientes
+        markedSalesCount: Number(markedSalesCountData ?? 0),
       });
 
       setLoading(false);
@@ -108,11 +116,12 @@ const DashboardMetrics: React.FC = () => {
     },
     {
       icon: <Icon icon="solar:users-group-rounded-linear" width={20} />,
-      value: loading ? '...' : metrics.totalClients.toString(),
-      label: 'Clientes Ativos',
+      value: loading ? '...' : metrics.markedSalesCount.toString(),
+      label: 'Vendas Marcadas',
       badge: null,
       badgeColor: 'slate',
-      clickable: false,
+      clickable: true,
+      onClick: () => navigate('/vendas-marcadas'),
     },
   ];
 
