@@ -3,7 +3,7 @@ import { Icon } from '@iconify/react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { SidebarOpenContext } from './SidebarContext.tsx';
-// import { supabase } from '../supabase';
+import { supabase } from '../supabase';
 
 const baseNavItems = [
   { to: '/visao-geral', icon: 'solar:widget-2-linear', label: 'Dashboard' },
@@ -16,10 +16,10 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ onOpenChange }) => {
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = React.useState(false);
-  // const [isAdmin, setIsAdmin] = React.useState(false); // Removido pois não está em uso
+  const [isAdmin, setIsAdmin] = React.useState(false);
   const sidebarRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
