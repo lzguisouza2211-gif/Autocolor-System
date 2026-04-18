@@ -102,7 +102,7 @@ const MarkedSales: React.FC = () => {
       .order('created_at', { ascending: false });
 
     if (fetchError) {
-      setError(`Erro ao carregar vendas marcadas: ${fetchError.message}`);
+      setError(`Erro ao carregar vendas a prazo: ${fetchError.message}`);
       setPendingSales([]);
       setLoading(false);
       return;
@@ -126,7 +126,7 @@ const MarkedSales: React.FC = () => {
         .in('id', customerIds);
 
       if (customersError) {
-        setError(`Erro ao carregar clientes das vendas marcadas: ${customersError.message}`);
+        setError(`Erro ao carregar clientes das vendas a prazo: ${customersError.message}`);
       } else {
         customersMap = new Map((customersData ?? []).map((customer) => [customer.id, customer as CustomerRow]));
       }
@@ -315,7 +315,7 @@ const MarkedSales: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Vendas Marcadas</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">Vendas a Prazo</h1>
         <p className="text-sm text-slate-500 mt-1">
           Visualize vendas a prazo, quanto cada cliente deve e faça abatimentos parciais ou baixa total.
         </p>
@@ -328,7 +328,7 @@ const MarkedSales: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100">
-            <h2 className="text-sm font-semibold text-slate-900">Clientes com vendas marcadas</h2>
+            <h2 className="text-sm font-semibold text-slate-900">Clientes com vendas a prazo</h2>
           </div>
 
           {loading ? (

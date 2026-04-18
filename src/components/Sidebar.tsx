@@ -50,7 +50,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onOpenChange }) => {
   const navItems = isAdmin
     ? [
         ...baseNavItems,
-        { to: '/vendas-marcadas', icon: 'solar:bill-list-linear', label: 'Vendas Marcadas' },
+        { to: '/vendas-marcadas', icon: 'solar:bill-list-linear', label: 'Vendas a Prazo' },
         { to: '/clientes', icon: 'solar:users-group-two-rounded-linear', label: 'Clientes' },
       ]
     : baseNavItems;

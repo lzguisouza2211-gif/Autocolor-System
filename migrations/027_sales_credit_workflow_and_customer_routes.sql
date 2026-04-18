@@ -1,4 +1,4 @@
--- Migration 027: vendas marcadas para pagamento posterior + rotas RPC de cliente
+-- Migration 027: vendas a prazo para pagamento posterior + rotas RPC de cliente
 
 ALTER TABLE sales
 ADD COLUMN IF NOT EXISTS payment_status VARCHAR(20) NOT NULL DEFAULT 'paid';

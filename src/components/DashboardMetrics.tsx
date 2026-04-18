@@ -58,7 +58,7 @@ const DashboardMetrics: React.FC = () => {
         .rpc('get_marked_sales_count');
 
       if (markedSalesCountError) {
-        console.error('Erro ao buscar quantidade de vendas marcadas:', markedSalesCountError);
+        console.error('Erro ao buscar quantidade de vendas a prazo:', markedSalesCountError);
       }
 
       // Produtos com estoque crítico (<=10)
@@ -117,7 +117,7 @@ const DashboardMetrics: React.FC = () => {
     {
       icon: <Icon icon="solar:users-group-rounded-linear" width={20} />,
       value: loading ? '...' : metrics.markedSalesCount.toString(),
-      label: 'Vendas Marcadas',
+      label: 'Vendas a Prazo',
       badge: null,
       badgeColor: 'slate',
       clickable: true,

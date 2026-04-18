@@ -83,7 +83,7 @@ const emptyForm: CustomerForm = {
 };
 
 const inputBaseClass =
-  'w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-50 disabled:text-slate-500';
+  'w-full px-3 py-2 text-sm text-slate-900 bg-slate-100 border border-slate-300 rounded-lg placeholder:text-slate-500 focus:outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500 disabled:bg-slate-200 disabled:text-slate-500';
 
 const onlyDigits = (value: string) => value.replace(/\D/g, '');
 
@@ -644,19 +644,19 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
           {mode === 'view' ? (
             <div className="border border-gray-200 rounded-lg p-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="bg-slate-50 border border-gray-200 rounded-lg p-3">
+                <div className="bg-slate-100 border border-slate-300 rounded-lg p-3">
                   <p className="text-xs text-slate-500">Nome</p>
                   <p className="text-sm font-medium text-slate-900 mt-1">{form.full_name || '-'}</p>
                 </div>
-                <div className="bg-slate-50 border border-gray-200 rounded-lg p-3">
+                <div className="bg-slate-100 border border-slate-300 rounded-lg p-3">
                   <p className="text-xs text-slate-500">CPF</p>
                   <p className="text-sm font-medium text-slate-900 mt-1">{form.cpf || '-'}</p>
                 </div>
-                <div className="bg-slate-50 border border-gray-200 rounded-lg p-3">
+                <div className="bg-slate-100 border border-slate-300 rounded-lg p-3">
                   <p className="text-xs text-slate-500">Telefone</p>
                   <p className="text-sm font-medium text-slate-900 mt-1">{form.phone || '-'}</p>
                 </div>
-                <div className="md:col-span-3 bg-slate-50 border border-gray-200 rounded-lg p-3">
+                <div className="md:col-span-3 bg-slate-100 border border-slate-300 rounded-lg p-3">
                   <p className="text-xs text-slate-500">Endereço</p>
                   <p className="text-sm font-medium text-slate-900 mt-1">
                     {form.street || '-'}
@@ -819,7 +819,7 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
               ) : (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div className="border border-gray-200 rounded-lg p-3 bg-slate-50">
+                    <div className="border border-slate-300 rounded-lg p-3 bg-slate-100">
                       <p className="text-xs text-slate-500">Total em compras</p>
                       <p className="text-base font-semibold text-slate-900 mt-1">
                         {Number(customerOverview?.total_sales ?? 0).toLocaleString('pt-BR', {
@@ -828,7 +828,7 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
                         })}
                       </p>
                     </div>
-                    <div className="border border-gray-200 rounded-lg p-3 bg-slate-50">
+                    <div className="border border-slate-300 rounded-lg p-3 bg-slate-100">
                       <p className="text-xs text-slate-500">Valor já pago</p>
                       <p className="text-base font-semibold text-emerald-700 mt-1">
                         {Number(customerOverview?.total_paid ?? 0).toLocaleString('pt-BR', {
@@ -837,7 +837,7 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
                         })}
                       </p>
                     </div>
-                    <div className="border border-gray-200 rounded-lg p-3 bg-slate-50">
+                    <div className="border border-slate-300 rounded-lg p-3 bg-slate-100">
                       <p className="text-xs text-slate-500">Quanto deve</p>
                       <p className="text-base font-semibold text-amber-700 mt-1">
                         {Number(customerOverview?.total_pending ?? 0).toLocaleString('pt-BR', {
