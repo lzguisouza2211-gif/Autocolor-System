@@ -325,8 +325,8 @@ const MarkedSales: React.FC = () => {
         <div className="border border-red-200 bg-red-50 text-red-700 rounded-lg px-3 py-2 text-sm">{error}</div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden lg:col-span-3">
           <div className="px-4 py-3 border-b border-gray-100">
             <h2 className="text-sm font-semibold text-slate-900">Clientes com vendas a prazo</h2>
           </div>
@@ -364,7 +364,7 @@ const MarkedSales: React.FC = () => {
           )}
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 space-y-4">
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 space-y-4 lg:col-span-9">
           <div>
             <h2 className="text-sm font-semibold text-slate-900">Individual do cliente</h2>
             <p className="text-xs text-slate-500 mt-1">Selecione um cliente à esquerda para ver detalhes.</p>
@@ -418,25 +418,34 @@ const MarkedSales: React.FC = () => {
                 {selectedCustomerHistory.length === 0 ? (
                   <div className="p-4 text-sm text-slate-400">Nenhuma venda para este cliente.</div>
                 ) : (
-                  <div className="max-h-[280px] overflow-y-auto">
-                    <table className="w-full text-left text-sm text-slate-600 min-w-[520px]">
+                  <div className="max-h-[280px] overflow-y-auto overflow-x-hidden">
+                    <table className="w-full table-fixed text-left text-xs text-slate-600">
+                      <colgroup>
+                        <col className="w-[8%]" />
+                        <col className="w-[14%]" />
+                        <col className="w-[12%]" />
+                        <col className="w-[14%]" />
+                        <col className="w-[14%]" />
+                        <col className="w-[14%]" />
+                        <col className="w-[24%]" />
+                      </colgroup>
                       <thead className="bg-gray-50 text-xs uppercase text-slate-500 font-medium">
                         <tr>
-                          <th className="px-3 py-2 tracking-wider">Venda</th>
-                          <th className="px-3 py-2 tracking-wider">Data</th>
-                          <th className="px-3 py-2 tracking-wider">Status</th>
-                                <th className="px-3 py-2 tracking-wider text-right">Pago</th>
-                                <th className="px-3 py-2 tracking-wider text-right">Falta</th>
-                          <th className="px-3 py-2 tracking-wider text-right">Valor</th>
-                          <th className="px-3 py-2 tracking-wider text-right">Ação</th>
+                            <th className="px-1.5 py-2 tracking-wider">Venda</th>
+                            <th className="px-2 py-2 tracking-wider">Data</th>
+                            <th className="px-2 py-2 tracking-wider">Status</th>
+                              <th className="px-2 py-2 tracking-wider text-right">Pago</th>
+                              <th className="px-2 py-2 tracking-wider text-right">Falta</th>
+                            <th className="px-2 py-2 tracking-wider text-right">Valor</th>
+                            <th className="px-2 py-2 tracking-wider text-right">Ação</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
                         {selectedCustomerHistory.map((sale) => (
                           <tr key={sale.sale_id}>
-                            <td className="px-3 py-2 text-xs text-slate-500">#{sale.sale_id}</td>
-                            <td className="px-3 py-2">{new Date(sale.created_at).toLocaleDateString('pt-BR')}</td>
-                            <td className="px-3 py-2">
+                            <td className="px-1.5 py-2 text-slate-500 whitespace-nowrap">#{sale.sale_id}</td>
+                            <td className="px-2 py-2">{new Date(sale.created_at).toLocaleDateString('pt-BR')}</td>
+                            <td className="px-2 py-2">
                               <span
                                 className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
                                   sale.payment_status === 'pending'
@@ -447,18 +456,18 @@ const MarkedSales: React.FC = () => {
                                 {sale.payment_status === 'pending' ? 'A prazo' : 'À vista'}
                               </span>
                             </td>
-                            <td className="px-3 py-2 text-right text-emerald-700 font-medium">
+                            <td className="px-2 py-2 text-right text-emerald-700 font-medium whitespace-nowrap">
                               {Number(sale.paid_amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                             </td>
-                            <td className="px-3 py-2 text-right text-amber-700 font-medium">
+                            <td className="px-2 py-2 text-right text-amber-700 font-medium whitespace-nowrap">
                               {Number(sale.remaining_amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                             </td>
-                            <td className="px-3 py-2 text-right font-medium text-slate-900">
+                            <td className="px-2 py-2 text-right font-medium text-slate-900 whitespace-nowrap">
                               {Number(sale.total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                             </td>
-                            <td className="px-3 py-2 text-right">
+                            <td className="px-2 py-2 text-right align-top">
                               {sale.payment_status === 'pending' ? (
-                                <div className="flex items-center justify-end gap-2">
+                                <div className="ml-auto w-[136px] space-y-1.5">
                                   <input
                                     type="number"
                                     min="0"
@@ -470,25 +479,27 @@ const MarkedSales: React.FC = () => {
                                         [sale.sale_id]: event.target.value,
                                       }))
                                     }
-                                    className="w-24 border border-gray-200 rounded px-2 py-1 text-xs text-right hide-spin"
+                                    className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-right focus:outline-none focus:ring-1 focus:ring-slate-300 hide-spin"
                                     placeholder="Abater"
                                   />
-                                  <button
-                                    type="button"
-                                    className="text-xs bg-slate-900 text-white rounded px-3 py-1 hover:bg-slate-800 disabled:opacity-60"
-                                    onClick={() => handleApplyAbatement(sale.sale_id)}
-                                    disabled={settlingSaleId === sale.sale_id}
-                                  >
-                                    Abater
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="text-xs bg-emerald-600 text-white rounded px-3 py-1 hover:bg-emerald-700 disabled:opacity-60"
-                                    onClick={() => handleSettleSale(sale.sale_id)}
-                                    disabled={settlingSaleId === sale.sale_id}
-                                  >
-                                    {settlingSaleId === sale.sale_id ? 'Baixando...' : 'Quitar'}
-                                  </button>
+                                  <div className="flex items-center justify-end gap-1.5">
+                                    <button
+                                      type="button"
+                                      className="flex-1 text-[11px] bg-white border border-slate-300 text-slate-700 rounded-md px-2 py-1.5 hover:bg-slate-50 disabled:opacity-60 whitespace-nowrap"
+                                      onClick={() => handleApplyAbatement(sale.sale_id)}
+                                      disabled={settlingSaleId === sale.sale_id}
+                                    >
+                                      Abater
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="flex-1 text-[11px] bg-emerald-600 text-white rounded-md px-2 py-1.5 hover:bg-emerald-700 disabled:opacity-60 whitespace-nowrap"
+                                      onClick={() => handleSettleSale(sale.sale_id)}
+                                      disabled={settlingSaleId === sale.sale_id}
+                                    >
+                                      {settlingSaleId === sale.sale_id ? 'Baixando...' : 'Quitar'}
+                                    </button>
+                                  </div>
                                 </div>
                               ) : (
                                 <span className="text-xs text-slate-400">Pago</span>
