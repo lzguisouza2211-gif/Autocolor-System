@@ -507,12 +507,7 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
       return;
     }
 
-    if (documentType === 'cpf') {
-      if (cpfDigits.length !== 11) {
-        setError('CPF inválido. Informe os 11 dígitos.');
-        return;
-      }
-    } else if (cnpjDigits.length !== 14) {
+    if (documentType === 'cnpj' && cnpjDigits.length !== 14) {
       setError('CNPJ inválido. Informe os 14 dígitos.');
       return;
     }
@@ -526,8 +521,8 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
 
     const payload = {
       full_name: form.full_name.trim(),
-      cpf: documentType === 'cpf' ? maskCpf(cpfDigits) : null,
-      cnpj: documentType === 'cnpj' ? maskCnpj(cnpjDigits) : null,
+      cpf: documentType === 'cpf' && cpfDigits ? maskCpf(cpfDigits) : null,
+      cnpj: documentType === 'cnpj' && cnpjDigits ? maskCnpj(cnpjDigits) : null,
       phone: phoneDigits ? maskPhone(phoneDigits) : null,
       birth_date: form.birth_date || null,
       zip_code: zipDigits ? maskZipCode(zipDigits) : null,
@@ -835,7 +830,7 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
                   className={inputBaseClass}
                   disabled={saving}
                   placeholder={documentType === 'cpf' ? '000.000.000-00' : '00.000.000/0000-00'}
-                  required
+                  required={documentType === 'cnpj'}
                 />
               </div>
 
