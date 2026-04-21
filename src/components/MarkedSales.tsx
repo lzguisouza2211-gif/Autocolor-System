@@ -457,10 +457,10 @@ const MarkedSales: React.FC = () => {
                                 className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
                                   sale.payment_status === 'pending'
                                     ? 'bg-amber-100 text-amber-700'
-                                    : 'bg-emerald-100 text-emerald-700'
+                                    : 'bg-blue-100 text-blue-700'
                                 }`}
                               >
-                                {sale.payment_status === 'pending' ? 'A prazo' : 'À vista'}
+                                {sale.payment_status === 'pending' ? 'A prazo' : 'Pago'}
                               </span>
                             </td>
                             <td className="px-2 py-2 text-right text-emerald-700 font-medium whitespace-nowrap">

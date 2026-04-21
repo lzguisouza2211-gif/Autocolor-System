@@ -20,6 +20,9 @@ interface SaleDetail {
     cpf: string | null;
     cnpj: string | null;
     phone: string | null;
+    street: string | null;
+    address_number: string | null;
+    neighborhood: string | null;
   } | null;
   sale_items: Array<{
     product_id: number;
@@ -167,7 +170,7 @@ const SalesHistory: React.FC = () => {
           if (sale.customer_id) {
             const { data } = await supabase
               .from('customers')
-              .select('full_name, cpf, cnpj, phone')
+              .select('full_name, cpf, cnpj, phone, street, address_number, neighborhood')
               .eq('id', sale.customer_id)
               .maybeSingle();
             customerData = data ?? null;
@@ -183,6 +186,18 @@ const SalesHistory: React.FC = () => {
 
   const calculateTotalDiscount = (saleItems: any[]) => {
     return saleItems.reduce((sum, item) => sum + (item.discount * item.quantity), 0);
+  };
+
+  const getSaleStatusInfo = (sale: SaleDetail) => {
+    if (sale.payment_status === 'pending') {
+      return { label: 'A prazo', badgeClass: 'bg-amber-100 text-amber-700' };
+    }
+
+    if (sale.customer_id || sale.customers) {
+      return { label: 'Pago', badgeClass: 'bg-blue-100 text-blue-700' };
+    }
+
+    return { label: 'À vista', badgeClass: 'bg-emerald-100 text-emerald-700' };
   };
 
   const openSaleDetail = (sale: SaleDetail) => {
@@ -240,7 +255,10 @@ const SalesHistory: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {sales.map((sale) => (
+                {sales.map((sale) => {
+                  const statusInfo = getSaleStatusInfo(sale);
+
+                  return (
                   <tr key={sale.id} className="hover:bg-gray-50 transition">
                     <td className="px-4 py-3 font-mono text-xs text-slate-400">#{sale.id}</td>
                     <td className="px-4 py-3 text-sm text-slate-600">
@@ -248,17 +266,13 @@ const SalesHistory: React.FC = () => {
                       <span className="text-xs text-gray-400">{new Date(sale.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
                     </td>
                     <td className="px-4 py-3 text-sm text-slate-600">
-                      {sale.customers?.full_name || 'Não informado'}
+                      {sale.customers?.full_name || 'Balcão'}
                     </td>
                     <td className="px-4 py-3 text-sm text-slate-600">
                       <span
-                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                          sale.payment_status === 'pending'
-                            ? 'bg-amber-100 text-amber-700'
-                            : 'bg-emerald-100 text-emerald-700'
-                        }`}
+                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusInfo.badgeClass}`}
                       >
-                        {sale.payment_status === 'pending' ? 'A prazo' : 'À vista'}
+                        {statusInfo.label}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right text-sm font-semibold text-slate-900">
@@ -273,7 +287,7 @@ const SalesHistory: React.FC = () => {
                       </button>
                     </td>
                   </tr>
-                ))}
+                )})}
               </tbody>
             </table>
           )}
@@ -319,7 +333,7 @@ const SalesHistory: React.FC = () => {
                 <div className="col-span-2">
                   <p className="text-xs text-slate-500 mb-1">Cliente</p>
                   <p className="text-sm font-semibold text-slate-900">
-                    {selectedSale.customers?.full_name || 'Não informado'}
+                    {selectedSale.customers?.full_name || 'Balcão'}
                   </p>
                   {(selectedSale.customers?.cpf || selectedSale.customers?.cnpj) && (
                     <p className="text-xs text-slate-400">
@@ -552,20 +566,66 @@ const SalesHistory: React.FC = () => {
                       onClick={async () => {
                         // Chamar endpoint de impressão
                         try {
-                          await fetch('http://localhost:4000/api/print', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                              items: selectedSale.sale_items.map(item => ({
-                                name: item.custom_name?.trim() ? item.custom_name : (item.products?.name || `Produto ${item.product_id}`),
-                                qty: item.quantity,
-                                price: item.price
-                              })),
-                              total: selectedSale.total,
-                              payment: 'N/A',
-                              company: { name: 'AutoColor' }
-                            })
-                          });
+                          const printItems = selectedSale.sale_items.map(item => ({
+                            name: item.custom_name?.trim() ? item.custom_name : (item.products?.name || `Produto ${item.product_id}`),
+                            qty: item.quantity,
+                            price: item.price
+                          }));
+
+                          const printCustomer = selectedSale.customers
+                            ? {
+                                full_name: selectedSale.customers.full_name,
+                                street: selectedSale.customers.street,
+                                address_number: selectedSale.customers.address_number,
+                                neighborhood: selectedSale.customers.neighborhood,
+                              }
+                            : null;
+
+                          const paymentLabel = getSaleStatusInfo(selectedSale).label;
+
+                          if (selectedSale.payment_status === 'pending' && printCustomer) {
+                            await fetch('http://localhost:4000/api/print', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                items: printItems,
+                                total: selectedSale.total,
+                                payment: paymentLabel,
+                                saleType: 'a_prazo',
+                                receiptType: 'customer',
+                                customer: printCustomer,
+                                company: { name: 'AutoColor' }
+                              })
+                            });
+
+                            await fetch('http://localhost:4000/api/print', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                items: printItems,
+                                total: selectedSale.total,
+                                payment: paymentLabel,
+                                saleType: 'a_prazo',
+                                receiptType: 'owner',
+                                customer: printCustomer,
+                                company: { name: 'AutoColor' }
+                              })
+                            });
+                          } else {
+                            await fetch('http://localhost:4000/api/print', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                items: printItems,
+                                total: selectedSale.total,
+                                payment: paymentLabel,
+                                saleType: selectedSale.payment_status === 'pending' ? 'a_prazo' : 'a_vista',
+                                receiptType: 'default',
+                                customer: printCustomer,
+                                company: { name: 'AutoColor' }
+                              })
+                            });
+                          }
                         } catch (err) {
                           alert('Erro ao imprimir pedido. Verifique o servidor de impressão.');
                         }
@@ -737,7 +797,7 @@ const SalesHistory: React.FC = () => {
                           if (updatedSale.customer_id) {
                             const { data } = await supabase
                               .from('customers')
-                              .select('full_name, cpf, cnpj, phone')
+                              .select('full_name, cpf, cnpj, phone, street, address_number, neighborhood')
                               .eq('id', updatedSale.customer_id)
                               .maybeSingle();
                             customerData = data ?? null;

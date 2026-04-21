@@ -69,10 +69,11 @@ function formatReceiptAsText(items, total, payment, company, receiptType, saleTy
 
   receipt += `Cliente: ${safeCustomerName}\n`;
 
-  if (receiptType === 'owner') {
-    receipt += `Rua: ${safeStreet || '-'}\n`;
-    receipt += `Numero: ${safeNumber || '-'}\n`;
-    receipt += `Bairro: ${safeNeighborhood || '-'}\n`;
+  if (customer) {
+    const addressParts = [safeStreet, safeNumber ? `Nº ${safeNumber}` : '', safeNeighborhood]
+      .filter(Boolean)
+      .join(', ');
+    receipt += `Endereco: ${addressParts || '-'}\n`;
   }
 
   receipt += '\n';
@@ -98,6 +99,10 @@ function formatReceiptAsText(items, total, payment, company, receiptType, saleTy
   receipt += '----------------------------------------\n\n';
   receipt += 'Assinatura: ____________________________\n\n';
   receipt += '     Obrigado pela preferencia!     \n\n\n\n\n';
+  
+  // Comando ESC/POS de corte total para separar as vias na impressora térmica
+  // GS V 0  => \x1D \x56 \x00
+  receipt += '\x1D\x56\x00';
   
   return receipt;
 }
