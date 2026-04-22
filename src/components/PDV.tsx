@@ -46,6 +46,8 @@ interface CustomerOption {
   neighborhood: string | null;
 }
 
+type SaleType = 'cash' | 'credit';
+
 const PDV: React.FC = () => {
   // Estado para abrir/fechar o carrinho (sidebar)
   const [cartOpen, setCartOpen] = useState(false);
@@ -76,8 +78,11 @@ const PDV: React.FC = () => {
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [activeCustomerIndex, setActiveCustomerIndex] = useState(0);
   const [customerPickerExpanded, setCustomerPickerExpanded] = useState(false);
-  const [markAsPendingPayment, setMarkAsPendingPayment] = useState(false);
+  const [saleType, setSaleType] = useState<SaleType | null>(null);
+  const [showSaleTypeDialog, setShowSaleTypeDialog] = useState(false);
+  const [pendingProductToAdd, setPendingProductToAdd] = useState<Product | null>(null);
   const [paidNowValue, setPaidNowValue] = useState('0');
+  const isCreditSale = saleType === 'credit';
 
   // Cálculo de totais (deve vir antes de hooks que dependem deles)
   const total = React.useMemo(() => cart.reduce((sum, item) => sum + item.subtotal, 0), [cart]);
@@ -277,12 +282,49 @@ const PDV: React.FC = () => {
   }, [customerSearchTerm, showCustomerDropdown]);
 
   useEffect(() => {
-    if (markAsPendingPayment && !selectedCustomer) {
+    if (isCreditSale && !selectedCustomer) {
       setCustomerPickerExpanded(true);
       setShowCustomerDropdown(true);
       setTimeout(() => customerInputRef.current?.focus(), 0);
     }
-  }, [markAsPendingPayment, selectedCustomer]);
+  }, [isCreditSale, selectedCustomer]);
+
+  useEffect(() => {
+    if (!cartOpen || !isCreditSale) return;
+
+    const timer = window.setTimeout(() => {
+      customerSelectorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 120);
+
+    return () => window.clearTimeout(timer);
+  }, [cartOpen, isCreditSale]);
+
+  const applySaleType = (type: SaleType) => {
+    setSaleType(type);
+    setShowSaleTypeDialog(false);
+    setError(null);
+    if (type === 'cash') {
+      setSelectedCustomer(null);
+      setCustomerSearch('');
+      setShowCustomerDropdown(false);
+      setCustomerPickerExpanded(false);
+      setPaidNowValue('0');
+      if (pendingProductToAdd) {
+        addProductToCart(pendingProductToAdd);
+        setPendingProductToAdd(null);
+      }
+      return;
+    }
+
+    setCustomerPickerExpanded(true);
+    setShowCustomerDropdown(true);
+    setTimeout(() => customerInputRef.current?.focus(), 0);
+
+    if (pendingProductToAdd) {
+      addProductToCart(pendingProductToAdd);
+      setPendingProductToAdd(null);
+    }
+  };
 
   const handleCustomerSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (!showCustomerDropdown) {
@@ -333,8 +375,7 @@ const PDV: React.FC = () => {
     }
   }, [cart, cartLoaded]);
 
-  // Adicionar produto ao carrinho
-  const addToCart = (product: Product) => {
+  const addProductToCart = (product: Product) => {
     setCart((prev) => {
       if (product.stock < 1) {
         setError('Produto sem estoque');
@@ -409,6 +450,18 @@ const PDV: React.FC = () => {
     setTimeout(() => setAddSuccess(null), 1200);
     // Não limpa o input nem fecha o dropdown
     inputRef.current?.focus();
+  };
+
+  // Adicionar produto ao carrinho
+  const addToCart = (product: Product) => {
+    if (!saleType) {
+      setPendingProductToAdd(product);
+      setShowSaleTypeDialog(true);
+      setError('Selecione se a venda será à vista ou a prazo antes de começar.');
+      return;
+    }
+
+    addProductToCart(product);
   };
 
   // Alterar quantidade
@@ -502,6 +555,13 @@ const PDV: React.FC = () => {
   const clearCart = () => {
     setCart([]);
     localStorage.removeItem('pdv_cart');
+    setSaleType(null);
+    setPendingProductToAdd(null);
+    setSelectedCustomer(null);
+    setCustomerSearch('');
+    setShowCustomerDropdown(false);
+    setCustomerPickerExpanded(false);
+    setPaidNowValue('0');
     setError(null);
     setSuccess(null);
   };
@@ -517,12 +577,18 @@ const PDV: React.FC = () => {
       return;
     }
 
-    if (markAsPendingPayment && !selectedCustomer) {
-      setError('Selecione um cliente para marcar a venda como pagamento posterior.');
+    if (!saleType) {
+      setShowSaleTypeDialog(true);
+      setError('Selecione se a venda será à vista ou a prazo antes de finalizar.');
       return;
     }
 
-    const paidNowParsed = Number(markAsPendingPayment ? paidNowValue.replace(',', '.') : total);
+    if (isCreditSale && !selectedCustomer) {
+      setError('Selecione um cliente para venda a prazo.');
+      return;
+    }
+
+    const paidNowParsed = Number(isCreditSale ? paidNowValue.replace(',', '.') : total);
     const paidAmount = Number.isFinite(paidNowParsed) ? paidNowParsed : 0;
 
     if (paidAmount < 0) {
@@ -541,14 +607,14 @@ const PDV: React.FC = () => {
     setSuccess(null);
     try {
       // 1. Inserir sale
-      const paymentStatus = markAsPendingPayment && paidAmount < total ? 'pending' : 'paid';
+      const paymentStatus = isCreditSale && paidAmount < total ? 'pending' : 'paid';
       const { data: sale, error: saleError } = await supabase
         .from('sales')
         .insert([
           {
             total,
             user_id: user.id,
-            customer_id: selectedCustomer?.id ?? null,
+            customer_id: isCreditSale ? selectedCustomer?.id ?? null : null,
             payment_status: paymentStatus,
             marked_at: paymentStatus === 'pending' ? new Date().toISOString() : null,
             paid_at: paymentStatus === 'paid' ? new Date().toISOString() : null,
@@ -613,7 +679,7 @@ const PDV: React.FC = () => {
       setSelectedCustomer(null);
       setCustomerSearch('');
       setShowCustomerDropdown(false);
-      setMarkAsPendingPayment(false);
+      setSaleType(null);
       setPaidNowValue('0');
       localStorage.removeItem('pdv_cart');
         // Chamar endpoint de impressão
@@ -634,7 +700,7 @@ const PDV: React.FC = () => {
               }
             : null;
 
-          if (paymentStatus === 'pending' && printCustomer) {
+          if (isCreditSale && printCustomer) {
             await fetch('http://localhost:4000/api/print', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -1113,9 +1179,50 @@ const PDV: React.FC = () => {
             </div>
             {error && <div className="text-red-600 text-center mt-2">{error}</div>}
             {success && <div className="text-green-600 text-center mt-2">{success}</div>}
-            <div className="flex flex-col gap-2 mt-2" ref={customerSelectorRef}>
-              <label className="text-sm font-medium text-gray-700">Cliente da venda</label>
+            <div className="mt-2">
+              <button
+                type="button"
+                disabled={finalizing}
+                onClick={() => setShowSaleTypeDialog(true)}
+                className={`w-full rounded-xl border px-3 py-3 text-left transition ${
+                  saleType === 'cash'
+                    ? 'border-emerald-300 bg-emerald-50 hover:bg-emerald-100'
+                    : saleType === 'credit'
+                      ? 'border-indigo-300 bg-indigo-50 hover:bg-indigo-100'
+                      : 'border-gray-300 bg-white hover:bg-slate-50'
+                } disabled:opacity-60`}
+              >
+                <p className="text-sm font-semibold text-slate-900">
+                  {saleType === 'cash' ? 'Tipo da venda: À vista' : saleType === 'credit' ? 'Tipo da venda: A prazo' : 'Definir tipo da venda'}
+                </p>
+                <p className="text-xs text-slate-500 mt-0.5">Toque para escolher entre à vista e a prazo</p>
+              </button>
+              {!saleType && (
+                <p className="text-xs text-indigo-600 mt-1">Escolha o tipo da venda para continuar.</p>
+              )}
+            </div>
+            <div
+              className={`flex flex-col gap-2 mt-2 rounded-xl p-2 transition-all ${
+                isCreditSale
+                  ? 'border border-indigo-300 bg-indigo-50 ring-2 ring-indigo-100'
+                  : ''
+              }`}
+              ref={customerSelectorRef}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-sm font-medium text-gray-700">Cliente da venda</label>
+                {isCreditSale && (
+                  <span className="text-[11px] font-medium text-indigo-700 bg-indigo-100 rounded-full px-2 py-0.5">
+                    Obrigatório
+                  </span>
+                )}
+              </div>
 
+              {saleType === 'cash' && (
+                <p className="text-xs text-slate-500">Venda à vista segue sem cliente.</p>
+              )}
+
+              {saleType === 'credit' && (
               <button
                 type="button"
                 disabled={finalizing || loadingCustomers}
@@ -1132,7 +1239,7 @@ const PDV: React.FC = () => {
                 className={`w-full rounded-xl border px-3 py-3 text-left transition ${
                   selectedCustomer
                     ? 'border-indigo-300 bg-indigo-50 hover:bg-indigo-100'
-                    : 'border-gray-300 bg-white hover:bg-slate-50'
+                    : 'border-indigo-300 bg-white hover:bg-indigo-50 ring-1 ring-indigo-100'
                 } disabled:opacity-60`}
               >
                 {selectedCustomer ? (
@@ -1155,12 +1262,13 @@ const PDV: React.FC = () => {
                   </div>
                 )}
               </button>
-
-              {!selectedCustomer && !customerPickerExpanded && (
-                <p className="text-xs text-slate-500">Venda sem cliente vinculado (opcional para pagamento à vista).</p>
               )}
 
-              {customerPickerExpanded && (
+              {saleType === 'credit' && !selectedCustomer && !customerPickerExpanded && (
+                <p className="text-xs text-slate-500">Seleção de cliente obrigatória para venda a prazo.</p>
+              )}
+
+              {saleType === 'credit' && customerPickerExpanded && (
                 <div className="border border-slate-200 rounded-xl bg-slate-50 p-3 space-y-2">
                   <div className="flex items-center gap-2">
                     <input
@@ -1234,32 +1342,12 @@ const PDV: React.FC = () => {
                 </div>
               )}
 
-              <label className="mt-2 flex items-start gap-2 text-sm text-gray-700">
-                <input
-                  type="checkbox"
-                  className="mt-0.5"
-                  checked={markAsPendingPayment}
-                  onChange={(event) => {
-                    setMarkAsPendingPayment(event.target.checked);
-                    if (event.target.checked && !selectedCustomer) {
-                      setError('Para marcar a venda, selecione um cliente.');
-                    } else {
-                      setError(null);
-                    }
-                    if (!event.target.checked) {
-                      setPaidNowValue('0');
-                    }
-                  }}
-                  disabled={finalizing}
-                />
-                <span>Marcar venda para cliente pagar depois</span>
-              </label>
-              {markAsPendingPayment && !selectedCustomer && (
-                <p className="text-xs text-amber-600">
+              {saleType === 'credit' && !selectedCustomer && (
+                <p className="text-xs text-indigo-600">
                   Selecione um cliente para concluir a venda marcada.
                 </p>
               )}
-              {markAsPendingPayment && (
+              {saleType === 'credit' && (
                 <>
                   <div className="mt-1">
                     <label className="text-xs text-gray-600">Valor pago agora (entrada)</label>
@@ -1286,13 +1374,51 @@ const PDV: React.FC = () => {
             >
               {finalizing
                 ? 'Registrando...'
-                : markAsPendingPayment
-                  ? 'Marcar Venda para Depois →'
-                  : 'Finalizar Venda →'}
+                : saleType === 'credit'
+                  ? 'Finalizar Venda a Prazo →'
+                  : saleType === 'cash'
+                    ? 'Finalizar Venda à Vista →'
+                    : 'Definir Tipo e Finalizar →'}
             </button>
           </div>
             </div>
           </>
+        )}
+
+        {showSaleTypeDialog && (
+          <div className="fixed inset-0 z-[70] bg-black/40 flex items-center justify-center p-4">
+            <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-200 p-4">
+              <h3 className="text-lg font-semibold text-slate-900">Tipo da venda</h3>
+              <p className="text-sm text-slate-500 mt-1">Essa venda vai ser à vista ou a prazo?</p>
+              <div className="mt-4 grid grid-cols-1 gap-2">
+                <button
+                  type="button"
+                  className="w-full rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 px-3 py-3 text-left"
+                  onClick={() => applySaleType('cash')}
+                >
+                  <p className="text-sm font-semibold text-slate-900">À vista</p>
+                  <p className="text-xs text-slate-600">Segue normal, sem cliente obrigatório.</p>
+                </button>
+                <button
+                  type="button"
+                  className="w-full rounded-xl border border-indigo-300 bg-indigo-50 hover:bg-indigo-100 px-3 py-3 text-left"
+                  onClick={() => applySaleType('credit')}
+                >
+                  <p className="text-sm font-semibold text-slate-900">A prazo</p>
+                  <p className="text-xs text-slate-600">Exige seleção de cliente cadastrado.</p>
+                </button>
+              </div>
+              <div className="mt-3 flex justify-end">
+                <button
+                  type="button"
+                  className="text-sm text-slate-500 hover:text-slate-700"
+                  onClick={() => setShowSaleTypeDialog(false)}
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

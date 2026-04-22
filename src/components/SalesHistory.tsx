@@ -48,6 +48,14 @@ interface Product {
   mark?: string;
 }
 
+interface CustomerOption {
+  id: number;
+  full_name: string;
+  cpf: string | null;
+  cnpj: string | null;
+  phone: string | null;
+}
+
 const SalesHistory: React.FC = () => {
       // Modal de confirmação de exclusão
       const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -67,6 +75,9 @@ const SalesHistory: React.FC = () => {
     const [showModal, setShowModal] = useState(false);
     const [editMode, setEditMode] = useState(false);
     const [editedItems, setEditedItems] = useState<any[]>([]);
+    const [customers, setCustomers] = useState<CustomerOption[]>([]);
+    const [loadingCustomers, setLoadingCustomers] = useState(false);
+    const [editedCustomerId, setEditedCustomerId] = useState<number | null>(null);
 
     useEffect(() => {
       if (!editMode) return;
@@ -82,6 +93,21 @@ const SalesHistory: React.FC = () => {
             console.log('Produtos carregados:', data);
           }
           setProducts(error ? [] : data || []);
+        });
+
+      setLoadingCustomers(true);
+      supabase
+        .from('customers')
+        .select('id, full_name, cpf, cnpj, phone')
+        .order('full_name', { ascending: true })
+        .then(({ data, error }) => {
+          if (error) {
+            console.error('Erro ao buscar clientes:', error);
+            setCustomers([]);
+          } else {
+            setCustomers((data || []) as CustomerOption[]);
+          }
+          setLoadingCustomers(false);
         });
     }, [editMode]);
     // Produtos filtrados para busca
@@ -205,11 +231,13 @@ const SalesHistory: React.FC = () => {
     setShowModal(true);
     setEditMode(false);
     setEditedItems(sale.sale_items.map(item => ({ ...item })));
+    setEditedCustomerId(sale.customer_id ?? null);
   };
 
   const closeSaleDetail = () => {
     setShowModal(false);
     setSelectedSale(null);
+    setEditedCustomerId(null);
   };
 
   const { loading: authLoading } = useAuth();
@@ -347,6 +375,39 @@ const SalesHistory: React.FC = () => {
               {/* Itens da venda */}
               <div>
                 <h3 className="text-sm font-semibold text-slate-900 mb-3">Itens</h3>
+                {editMode && (
+                  <div className="mb-3">
+                    <label className="text-xs text-slate-500 mb-1 block">Cliente da venda</label>
+                    <select
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+                      value={editedCustomerId ?? ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (selectedSale.payment_status === 'pending' && !value) {
+                          return;
+                        }
+                        setEditedCustomerId(value ? Number(value) : null);
+                      }}
+                      disabled={loadingCustomers}
+                    >
+                      <option value="" disabled={selectedSale.payment_status === 'pending'}>
+                        Balcão (sem cliente)
+                      </option>
+                      {customers.map((customer) => (
+                        <option key={customer.id} value={customer.id}>
+                          {customer.full_name}
+                          {customer.cnpj ? ` • CNPJ: ${customer.cnpj}` : customer.cpf ? ` • CPF: ${customer.cpf}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    {loadingCustomers && (
+                      <p className="text-xs text-slate-400 mt-1">Carregando clientes...</p>
+                    )}
+                    {selectedSale.payment_status === 'pending' && !editedCustomerId && (
+                      <p className="text-xs text-amber-600 mt-1">Venda a prazo exige cliente vinculado.</p>
+                    )}
+                  </div>
+                )}
                 <div className="space-y-2 border border-gray-200 rounded-lg p-4">
                   {editMode ? (
                     <>
@@ -730,6 +791,10 @@ const SalesHistory: React.FC = () => {
                     <button
                       onClick={async () => {
                         if (!selectedSale) return;
+                        if (selectedSale.payment_status === 'pending' && !editedCustomerId) {
+                          alert('Venda a prazo não pode ser marcada como Balcão. Selecione um cliente.');
+                          return;
+                        }
                         // Removido: oldItems não é mais necessário
                         const newItems = editedItems;
                         // Mapear por product_id para fácil lookup
@@ -757,7 +822,7 @@ const SalesHistory: React.FC = () => {
                         const newTotal = newItems.reduce((sum, item) => sum + (item.price - item.discount) * item.quantity, 0);
                         await supabase
                           .from('sales')
-                          .update({ total: newTotal })
+                          .update({ total: newTotal, customer_id: editedCustomerId })
                           .eq('id', selectedSale.id);
                         // alert('Venda atualizada com sucesso!');
                         setEditMode(false);
