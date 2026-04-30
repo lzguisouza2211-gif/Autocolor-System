@@ -91,8 +91,9 @@ function formatReceiptAsText(items, total, payment, company, receiptType, saleTy
 
   receipt += '\n----------------------------------------\n';
 
+  receipt += `           TOTAL: R$ ${Number(total).toFixed(2)}           \n`;
+
   if (receiptType !== 'customer') {
-    receipt += `           TOTAL: R$ ${Number(total).toFixed(2)}           \n`;
     receipt += `        Pagamento: ${payment}        \n`;
   }
 
