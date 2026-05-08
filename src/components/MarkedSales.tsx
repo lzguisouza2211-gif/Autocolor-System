@@ -82,6 +82,8 @@ const MarkedSales: React.FC = () => {
   const [loadingCustomerDetails, setLoadingCustomerDetails] = useState(false);
   const [settlingSaleId, setSettlingSaleId] = useState<number | null>(null);
   const [abatementValues, setAbatementValues] = useState<Record<number, string>>({});
+  const [totalAbatementValue, setTotalAbatementValue] = useState('');
+  const [settlingTotalAbatement, setSettlingTotalAbatement] = useState(false);
 
   const normalizePaidAmount = (total: number, paidAmount: number | null | undefined, status: 'paid' | 'pending') => {
     if (status === 'paid') {
@@ -284,6 +286,69 @@ const MarkedSales: React.FC = () => {
     setSettlingSaleId(null);
   };
 
+  const handleApplyTotalAbatement = async () => {
+    if (!selectedCustomerId) return;
+
+    const amount = Number(totalAbatementValue.replace(',', '.'));
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setError('Informe um valor de abatimento total maior que zero.');
+      return;
+    }
+
+    const pendingSales = selectedCustomerHistory
+      .filter((sale) => sale.payment_status === 'pending' && sale.remaining_amount > 0)
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+    if (pendingSales.length === 0) {
+      setError('Este cliente não possui vendas pendentes para abater.');
+      return;
+    }
+
+    const totalPending = pendingSales.reduce((sum, sale) => sum + Number(sale.remaining_amount), 0);
+    if (amount > totalPending) {
+      setError('O abatimento total não pode ser maior que o valor total em aberto do cliente.');
+      return;
+    }
+
+    setSettlingTotalAbatement(true);
+    setError(null);
+
+    let remainingAmount = amount;
+
+    for (const sale of pendingSales) {
+      if (remainingAmount <= 0) break;
+
+      const amountForSale = Math.min(remainingAmount, Number(sale.remaining_amount));
+      const newPaidAmount = Math.min(Number(sale.total), Number(sale.paid_amount) + amountForSale);
+      const isSettled = newPaidAmount >= Number(sale.total);
+
+      const { error: updateError } = await supabase
+        .from('sales')
+        .update({
+          paid_amount: newPaidAmount,
+          payment_status: isSettled ? 'paid' : 'pending',
+          paid_at: isSettled ? new Date().toISOString() : null,
+        })
+        .eq('id', sale.sale_id)
+        .eq('payment_status', 'pending')
+        .is('deleted_at', null);
+
+      if (updateError) {
+        setError(`Erro ao aplicar abatimento total na venda #${sale.sale_id}: ${updateError.message}`);
+        setSettlingTotalAbatement(false);
+        return;
+      }
+
+      remainingAmount -= amountForSale;
+    }
+
+    setTotalAbatementValue('');
+    await fetchPendingSales();
+    await fetchCustomerDetails(selectedCustomerId);
+    setSettlingTotalAbatement(false);
+  };
+
   useEffect(() => {
     fetchPendingSales();
   }, []);
@@ -350,6 +415,7 @@ const MarkedSales: React.FC = () => {
                   type="button"
                   onClick={() => {
                     setSelectedCustomerId(customer.customerId);
+                    setTotalAbatementValue('');
                     fetchCustomerDetails(customer.customerId);
                   }}
                   className={`w-full text-left px-4 py-3 hover:bg-slate-50 transition ${
@@ -418,6 +484,30 @@ const MarkedSales: React.FC = () => {
                       currency: 'BRL',
                     })}
                   </p>
+                </div>
+              </div>
+
+              <div className="border border-gray-200 rounded-lg p-3 bg-slate-50">
+                <p className="text-xs text-slate-500">Abater no saldo total do cliente</p>
+                <div className="mt-2 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-end">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={totalAbatementValue}
+                    onChange={(event) => setTotalAbatementValue(event.target.value)}
+                    className="w-full sm:w-40 border border-gray-300 rounded-md px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-1 focus:ring-slate-300 hide-spin"
+                    placeholder="Valor"
+                    disabled={settlingTotalAbatement || Number(selectedCustomerOverview?.total_pending ?? 0) <= 0}
+                  />
+                  <button
+                    type="button"
+                    className="text-xs bg-slate-900 text-white rounded-md px-3 py-1.5 hover:bg-slate-800 disabled:opacity-60"
+                    onClick={handleApplyTotalAbatement}
+                    disabled={settlingTotalAbatement || Number(selectedCustomerOverview?.total_pending ?? 0) <= 0}
+                  >
+                    {settlingTotalAbatement ? 'Aplicando...' : 'Abater no Total'}
+                  </button>
                 </div>
               </div>
 
@@ -494,7 +584,7 @@ const MarkedSales: React.FC = () => {
                                       type="button"
                                       className="flex-1 text-[11px] bg-white border border-slate-300 text-slate-700 rounded-md px-2 py-1.5 hover:bg-slate-50 disabled:opacity-60 whitespace-nowrap"
                                       onClick={() => handleApplyAbatement(sale.sale_id)}
-                                      disabled={settlingSaleId === sale.sale_id}
+                                      disabled={settlingSaleId === sale.sale_id || settlingTotalAbatement}
                                     >
                                       Abater
                                     </button>
@@ -502,7 +592,7 @@ const MarkedSales: React.FC = () => {
                                       type="button"
                                       className="flex-1 text-[11px] bg-emerald-600 text-white rounded-md px-2 py-1.5 hover:bg-emerald-700 disabled:opacity-60 whitespace-nowrap"
                                       onClick={() => handleSettleSale(sale.sale_id)}
-                                      disabled={settlingSaleId === sale.sale_id}
+                                      disabled={settlingSaleId === sale.sale_id || settlingTotalAbatement}
                                     >
                                       {settlingSaleId === sale.sale_id ? 'Baixando...' : 'Quitar'}
                                     </button>

@@ -183,6 +183,8 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [settlingSaleId, setSettlingSaleId] = useState<number | null>(null);
   const [abatementValues, setAbatementValues] = useState<Record<number, string>>({});
+  const [totalAbatementValue, setTotalAbatementValue] = useState('');
+  const [settlingTotalAbatement, setSettlingTotalAbatement] = useState(false);
   const [customerOverview, setCustomerOverview] = useState<CustomerAccountOverview | null>(null);
   const [customerSalesHistory, setCustomerSalesHistory] = useState<CustomerSaleHistoryItem[]>([]);
   const lastCepLookup = useRef<string>('');
@@ -409,6 +411,71 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
     setSettlingSaleId(null);
   };
 
+  const handleApplyTotalAbatement = async () => {
+    if (!selectedCustomerId) return;
+
+    const amount = Number(totalAbatementValue.replace(',', '.'));
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setError('Informe um valor de abatimento total maior que zero.');
+      return;
+    }
+
+    const pendingSales = customerSalesHistory
+      .filter((sale) => sale.payment_status === 'pending' && sale.remaining_amount > 0)
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+    if (pendingSales.length === 0) {
+      setError('Este cliente não possui vendas pendentes para abater.');
+      return;
+    }
+
+    const totalPending = pendingSales.reduce((sum, sale) => sum + Number(sale.remaining_amount), 0);
+
+    if (amount > totalPending) {
+      setError('O abatimento total não pode ser maior que o valor total em aberto do cliente.');
+      return;
+    }
+
+    setSettlingTotalAbatement(true);
+    setError(null);
+    setSuccess(null);
+
+    let remainingAmount = amount;
+
+    for (const sale of pendingSales) {
+      if (remainingAmount <= 0) break;
+
+      const amountForSale = Math.min(remainingAmount, Number(sale.remaining_amount));
+      const newPaidAmount = Math.min(Number(sale.total), Number(sale.paid_amount) + amountForSale);
+      const isSettled = newPaidAmount >= Number(sale.total);
+
+      const { error: updateError } = await supabase
+        .from('sales')
+        .update({
+          paid_amount: newPaidAmount,
+          payment_status: isSettled ? 'paid' : 'pending',
+          paid_at: isSettled ? new Date().toISOString() : null,
+        })
+        .eq('id', sale.sale_id)
+        .eq('payment_status', 'pending')
+        .is('deleted_at', null);
+
+      if (updateError) {
+        setError(`Erro ao aplicar abatimento total na venda #${sale.sale_id}: ${updateError.message}`);
+        setSettlingTotalAbatement(false);
+        return;
+      }
+
+      remainingAmount -= amountForSale;
+    }
+
+    setSuccess('Abatimento total aplicado com sucesso no saldo em aberto do cliente.');
+    setTotalAbatementValue('');
+    await fetchCustomerFinancialData(selectedCustomerId);
+    setSettlingTotalAbatement(false);
+  };
+
   const loadCustomerIntoForm = (customer: Customer, nextMode: FormMode) => {
     setSelectedCustomerId(customer.id);
     setMode(nextMode);
@@ -431,6 +498,7 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
     setSuccess(null);
     setCepError(null);
     setAbatementValues({});
+    setTotalAbatementValue('');
 
     if (nextMode === 'view') {
       fetchCustomerFinancialData(customer.id);
@@ -454,6 +522,7 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
       setCustomerOverview(null);
       setCustomerSalesHistory([]);
       setAbatementValues({});
+      setTotalAbatementValue('');
       lastCepLookup.current = '';
       return;
     }
@@ -991,6 +1060,32 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
 
                   <div>
                     <h4 className="text-sm font-semibold text-slate-900 mb-2">Histórico de Vendas do Cliente</h4>
+                    <div className="mb-3 border border-slate-300 rounded-lg p-3 bg-slate-100">
+                      <p className="text-xs text-slate-500 mb-2">Abater no saldo total do cliente</p>
+                      <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-end">
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={totalAbatementValue}
+                          onChange={(event) => setTotalAbatementValue(event.target.value)}
+                          className="w-full sm:w-36 border border-gray-200 rounded px-2 py-1 text-sm text-right hide-spin"
+                          placeholder="Valor"
+                          disabled={settlingTotalAbatement || Number(customerOverview?.total_pending ?? 0) <= 0}
+                        />
+                        <button
+                          type="button"
+                          onClick={handleApplyTotalAbatement}
+                          disabled={settlingTotalAbatement || Number(customerOverview?.total_pending ?? 0) <= 0}
+                          className="text-sm bg-slate-900 text-white rounded px-3 py-1.5 hover:bg-slate-800 disabled:opacity-60"
+                        >
+                          {settlingTotalAbatement ? 'Aplicando...' : 'Abater no Total'}
+                        </button>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-2">
+                        O valor será distribuído automaticamente entre as vendas pendentes mais antigas.
+                      </p>
+                    </div>
                     <div className="border border-gray-200 rounded-lg overflow-hidden">
                       {customerSalesHistory.length === 0 ? (
                         <div className="p-4 text-sm text-slate-400">Nenhuma venda vinculada a este cliente.</div>
@@ -1055,7 +1150,7 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
                                         <button
                                           type="button"
                                           onClick={() => handleApplyAbatement(sale.sale_id)}
-                                          disabled={settlingSaleId === sale.sale_id}
+                                          disabled={settlingSaleId === sale.sale_id || settlingTotalAbatement}
                                           className="text-xs bg-slate-900 text-white rounded px-3 py-1 hover:bg-slate-800 disabled:opacity-60"
                                         >
                                           Abater
@@ -1063,7 +1158,7 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
                                         <button
                                           type="button"
                                           onClick={() => handleSettleSale(sale.sale_id)}
-                                          disabled={settlingSaleId === sale.sale_id}
+                                          disabled={settlingSaleId === sale.sale_id || settlingTotalAbatement}
                                           className="text-xs bg-emerald-600 text-white rounded px-3 py-1 hover:bg-emerald-700 disabled:opacity-60"
                                         >
                                           {settlingSaleId === sale.sale_id ? 'Baixando...' : 'Quitar'}
