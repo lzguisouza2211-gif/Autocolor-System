@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { supabase } from '../supabase';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -185,6 +185,8 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
   const [abatementValues, setAbatementValues] = useState<Record<number, string>>({});
   const [totalAbatementValue, setTotalAbatementValue] = useState('');
   const [settlingTotalAbatement, setSettlingTotalAbatement] = useState(false);
+  const [settlingAllSales, setSettlingAllSales] = useState(false);
+  const [showSettleAllConfirmModal, setShowSettleAllConfirmModal] = useState(false);
   const [customerOverview, setCustomerOverview] = useState<CustomerAccountOverview | null>(null);
   const [customerSalesHistory, setCustomerSalesHistory] = useState<CustomerSaleHistoryItem[]>([]);
   const lastCepLookup = useRef<string>('');
@@ -273,7 +275,7 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
     [customers, selectedCustomerId]
   );
 
-  const fetchCustomerFinancialData = async (customerId: number) => {
+  const fetchCustomerFinancialData = useCallback(async (customerId: number) => {
     setDetailsLoading(true);
     const { data: salesData, error: salesError } = await supabase
       .from('sales')
@@ -325,7 +327,7 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
     setCustomerSalesHistory(history);
 
     setDetailsLoading(false);
-  };
+  }, []);
 
   const handleSettleSale = async (saleId: number) => {
     if (!selectedCustomerId) return;
@@ -476,7 +478,58 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
     setSettlingTotalAbatement(false);
   };
 
-  const loadCustomerIntoForm = (customer: Customer, nextMode: FormMode) => {
+  const handleSettleAllPendingSales = async () => {
+    if (!selectedCustomerId) return;
+
+    setShowSettleAllConfirmModal(false);
+
+    const pendingSales = customerSalesHistory.filter(
+      (sale) => sale.payment_status === 'pending' && sale.remaining_amount > 0
+    );
+
+    if (pendingSales.length === 0) {
+      setError('Este cliente não possui vendas pendentes para quitar.');
+      return;
+    }
+
+    setSettlingAllSales(true);
+    setError(null);
+    setSuccess(null);
+
+    const paidAt = new Date().toISOString();
+    let settledCount = 0;
+
+    for (const sale of pendingSales) {
+      const { error: updateError } = await supabase
+        .from('sales')
+        .update({
+          paid_amount: Number(sale.total),
+          payment_status: 'paid',
+          paid_at: paidAt,
+        })
+        .eq('id', sale.sale_id)
+        .eq('payment_status', 'pending')
+        .is('deleted_at', null);
+
+      if (updateError) {
+        setError(`Erro ao quitar venda #${sale.sale_id}: ${updateError.message}`);
+        setSettlingAllSales(false);
+        return;
+      }
+
+      settledCount += 1;
+    }
+
+    setSuccess(
+      settledCount === 1
+        ? '1 venda pendente foi quitada com sucesso.'
+        : `${settledCount} vendas pendentes foram quitadas com sucesso.`
+    );
+    await fetchCustomerFinancialData(selectedCustomerId);
+    setSettlingAllSales(false);
+  };
+
+  const loadCustomerIntoForm = useCallback((customer: Customer, nextMode: FormMode) => {
     setSelectedCustomerId(customer.id);
     setMode(nextMode);
     setForm({
@@ -499,6 +552,7 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
     setCepError(null);
     setAbatementValues({});
     setTotalAbatementValue('');
+    setShowSettleAllConfirmModal(false);
 
     if (nextMode === 'view') {
       fetchCustomerFinancialData(customer.id);
@@ -506,7 +560,7 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
       setCustomerOverview(null);
       setCustomerSalesHistory([]);
     }
-  };
+  }, [fetchCustomerFinancialData]);
 
   useEffect(() => {
     if (pageMode === 'list') return;
@@ -523,6 +577,7 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
       setCustomerSalesHistory([]);
       setAbatementValues({});
       setTotalAbatementValue('');
+      setShowSettleAllConfirmModal(false);
       lastCepLookup.current = '';
       return;
     }
@@ -539,7 +594,7 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
     } else if (!loading) {
       setError('Cliente não encontrado.');
     }
-  }, [pageMode, routeCustomerId, customers, loading]);
+  }, [pageMode, routeCustomerId, customers, loading, loadCustomerIntoForm]);
 
   const handleFormChange =
     (field: keyof CustomerForm) => (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -1071,21 +1126,71 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
                           onChange={(event) => setTotalAbatementValue(event.target.value)}
                           className="w-full sm:w-36 border border-gray-200 rounded px-2 py-1 text-sm text-right hide-spin"
                           placeholder="Valor"
-                          disabled={settlingTotalAbatement || Number(customerOverview?.total_pending ?? 0) <= 0}
+                          disabled={
+                            settlingTotalAbatement ||
+                            settlingAllSales ||
+                            Number(customerOverview?.total_pending ?? 0) <= 0
+                          }
                         />
                         <button
                           type="button"
                           onClick={handleApplyTotalAbatement}
-                          disabled={settlingTotalAbatement || Number(customerOverview?.total_pending ?? 0) <= 0}
+                          disabled={
+                            settlingTotalAbatement ||
+                            settlingAllSales ||
+                            Number(customerOverview?.total_pending ?? 0) <= 0
+                          }
                           className="text-sm bg-slate-900 text-white rounded px-3 py-1.5 hover:bg-slate-800 disabled:opacity-60"
                         >
                           {settlingTotalAbatement ? 'Aplicando...' : 'Abater no Total'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowSettleAllConfirmModal(true)}
+                          disabled={
+                            settlingAllSales ||
+                            settlingTotalAbatement ||
+                            Number(customerOverview?.total_pending ?? 0) <= 0
+                          }
+                          className="text-sm bg-emerald-600 text-white rounded px-3 py-1.5 hover:bg-emerald-700 disabled:opacity-60"
+                        >
+                          {settlingAllSales ? 'Quitando...' : 'Quitar Tudo'}
                         </button>
                       </div>
                       <p className="text-xs text-slate-500 mt-2">
                         O valor será distribuído automaticamente entre as vendas pendentes mais antigas.
                       </p>
                     </div>
+
+                    {showSettleAllConfirmModal && (
+                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+                        <div className="w-full max-w-sm rounded-lg border border-gray-200 bg-white p-4 shadow-lg">
+                          <h5 className="text-sm font-semibold text-slate-900">Confirmar quitação total</h5>
+                          <p className="mt-2 text-sm text-slate-600">
+                            Deseja realmente quitar todas as contas pendentes deste cliente?
+                          </p>
+                          <div className="mt-4 flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setShowSettleAllConfirmModal(false)}
+                              disabled={settlingAllSales}
+                              className="text-sm rounded px-3 py-1.5 border border-gray-200 text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                            >
+                              Cancelar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleSettleAllPendingSales}
+                              disabled={settlingAllSales}
+                              className="text-sm bg-emerald-600 text-white rounded px-3 py-1.5 hover:bg-emerald-700 disabled:opacity-60"
+                            >
+                              {settlingAllSales ? 'Quitando...' : 'Confirmar'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="border border-gray-200 rounded-lg overflow-hidden">
                       {customerSalesHistory.length === 0 ? (
                         <div className="p-4 text-sm text-slate-400">Nenhuma venda vinculada a este cliente.</div>
@@ -1150,7 +1255,11 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
                                         <button
                                           type="button"
                                           onClick={() => handleApplyAbatement(sale.sale_id)}
-                                          disabled={settlingSaleId === sale.sale_id || settlingTotalAbatement}
+                                          disabled={
+                                            settlingSaleId === sale.sale_id ||
+                                            settlingTotalAbatement ||
+                                            settlingAllSales
+                                          }
                                           className="text-xs bg-slate-900 text-white rounded px-3 py-1 hover:bg-slate-800 disabled:opacity-60"
                                         >
                                           Abater
@@ -1158,7 +1267,11 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
                                         <button
                                           type="button"
                                           onClick={() => handleSettleSale(sale.sale_id)}
-                                          disabled={settlingSaleId === sale.sale_id || settlingTotalAbatement}
+                                          disabled={
+                                            settlingSaleId === sale.sale_id ||
+                                            settlingTotalAbatement ||
+                                            settlingAllSales
+                                          }
                                           className="text-xs bg-emerald-600 text-white rounded px-3 py-1 hover:bg-emerald-700 disabled:opacity-60"
                                         >
                                           {settlingSaleId === sale.sale_id ? 'Baixando...' : 'Quitar'}

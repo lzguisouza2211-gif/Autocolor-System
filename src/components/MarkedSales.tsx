@@ -84,6 +84,8 @@ const MarkedSales: React.FC = () => {
   const [abatementValues, setAbatementValues] = useState<Record<number, string>>({});
   const [totalAbatementValue, setTotalAbatementValue] = useState('');
   const [settlingTotalAbatement, setSettlingTotalAbatement] = useState(false);
+  const [settlingAllSales, setSettlingAllSales] = useState(false);
+  const [showSettleAllConfirmModal, setShowSettleAllConfirmModal] = useState(false);
 
   const normalizePaidAmount = (total: number, paidAmount: number | null | undefined, status: 'paid' | 'pending') => {
     if (status === 'paid') {
@@ -349,6 +351,49 @@ const MarkedSales: React.FC = () => {
     setSettlingTotalAbatement(false);
   };
 
+  const handleSettleAllPendingSales = async () => {
+    if (!selectedCustomerId) return;
+
+    setShowSettleAllConfirmModal(false);
+
+    const pendingSales = selectedCustomerHistory
+      .filter((sale) => sale.payment_status === 'pending' && sale.remaining_amount > 0)
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+    if (pendingSales.length === 0) {
+      setError('Este cliente não possui vendas pendentes para quitar.');
+      return;
+    }
+
+    setSettlingAllSales(true);
+    setError(null);
+
+    const paidAt = new Date().toISOString();
+
+    for (const sale of pendingSales) {
+      const { error: updateError } = await supabase
+        .from('sales')
+        .update({
+          paid_amount: Number(sale.total),
+          payment_status: 'paid',
+          paid_at: paidAt,
+        })
+        .eq('id', sale.sale_id)
+        .eq('payment_status', 'pending')
+        .is('deleted_at', null);
+
+      if (updateError) {
+        setError(`Erro ao quitar venda #${sale.sale_id}: ${updateError.message}`);
+        setSettlingAllSales(false);
+        return;
+      }
+    }
+
+    await fetchPendingSales();
+    await fetchCustomerDetails(selectedCustomerId);
+    setSettlingAllSales(false);
+  };
+
   useEffect(() => {
     fetchPendingSales();
   }, []);
@@ -416,6 +461,7 @@ const MarkedSales: React.FC = () => {
                   onClick={() => {
                     setSelectedCustomerId(customer.customerId);
                     setTotalAbatementValue('');
+                    setShowSettleAllConfirmModal(false);
                     fetchCustomerDetails(customer.customerId);
                   }}
                   className={`w-full text-left px-4 py-3 hover:bg-slate-50 transition ${
@@ -498,18 +544,67 @@ const MarkedSales: React.FC = () => {
                     onChange={(event) => setTotalAbatementValue(event.target.value)}
                     className="w-full sm:w-40 border border-gray-300 rounded-md px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-1 focus:ring-slate-300 hide-spin"
                     placeholder="Valor"
-                    disabled={settlingTotalAbatement || Number(selectedCustomerOverview?.total_pending ?? 0) <= 0}
+                    disabled={
+                      settlingTotalAbatement ||
+                      settlingAllSales ||
+                      Number(selectedCustomerOverview?.total_pending ?? 0) <= 0
+                    }
                   />
                   <button
                     type="button"
                     className="text-xs bg-slate-900 text-white rounded-md px-3 py-1.5 hover:bg-slate-800 disabled:opacity-60"
                     onClick={handleApplyTotalAbatement}
-                    disabled={settlingTotalAbatement || Number(selectedCustomerOverview?.total_pending ?? 0) <= 0}
+                    disabled={
+                      settlingTotalAbatement ||
+                      settlingAllSales ||
+                      Number(selectedCustomerOverview?.total_pending ?? 0) <= 0
+                    }
                   >
                     {settlingTotalAbatement ? 'Aplicando...' : 'Abater no Total'}
                   </button>
+                  <button
+                    type="button"
+                    className="text-xs bg-emerald-600 text-white rounded-md px-3 py-1.5 hover:bg-emerald-700 disabled:opacity-60"
+                    onClick={() => setShowSettleAllConfirmModal(true)}
+                    disabled={
+                      settlingAllSales ||
+                      settlingTotalAbatement ||
+                      Number(selectedCustomerOverview?.total_pending ?? 0) <= 0
+                    }
+                  >
+                    {settlingAllSales ? 'Quitando...' : 'Quitar Tudo'}
+                  </button>
                 </div>
               </div>
+
+              {showSettleAllConfirmModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+                  <div className="w-full max-w-sm rounded-lg border border-gray-200 bg-white p-4 shadow-lg">
+                    <h5 className="text-sm font-semibold text-slate-900">Confirmar quitação total</h5>
+                    <p className="mt-2 text-sm text-slate-600">
+                      Deseja realmente quitar todas as contas pendentes deste cliente?
+                    </p>
+                    <div className="mt-4 flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowSettleAllConfirmModal(false)}
+                        disabled={settlingAllSales}
+                        className="text-sm rounded px-3 py-1.5 border border-gray-200 text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSettleAllPendingSales}
+                        disabled={settlingAllSales}
+                        className="text-sm bg-emerald-600 text-white rounded px-3 py-1.5 hover:bg-emerald-700 disabled:opacity-60"
+                      >
+                        {settlingAllSales ? 'Quitando...' : 'Confirmar'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="border border-gray-200 rounded-lg overflow-hidden">
                 {selectedCustomerHistory.length === 0 ? (
@@ -584,7 +679,11 @@ const MarkedSales: React.FC = () => {
                                       type="button"
                                       className="flex-1 text-[11px] bg-white border border-slate-300 text-slate-700 rounded-md px-2 py-1.5 hover:bg-slate-50 disabled:opacity-60 whitespace-nowrap"
                                       onClick={() => handleApplyAbatement(sale.sale_id)}
-                                      disabled={settlingSaleId === sale.sale_id || settlingTotalAbatement}
+                                      disabled={
+                                        settlingSaleId === sale.sale_id ||
+                                        settlingTotalAbatement ||
+                                        settlingAllSales
+                                      }
                                     >
                                       Abater
                                     </button>
@@ -592,7 +691,11 @@ const MarkedSales: React.FC = () => {
                                       type="button"
                                       className="flex-1 text-[11px] bg-emerald-600 text-white rounded-md px-2 py-1.5 hover:bg-emerald-700 disabled:opacity-60 whitespace-nowrap"
                                       onClick={() => handleSettleSale(sale.sale_id)}
-                                      disabled={settlingSaleId === sale.sale_id || settlingTotalAbatement}
+                                      disabled={
+                                        settlingSaleId === sale.sale_id ||
+                                        settlingTotalAbatement ||
+                                        settlingAllSales
+                                      }
                                     >
                                       {settlingSaleId === sale.sale_id ? 'Baixando...' : 'Quitar'}
                                     </button>
