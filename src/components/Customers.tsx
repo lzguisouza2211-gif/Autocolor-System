@@ -180,6 +180,32 @@ const sanitizeFileName = (value: string) =>
     .replace(/^_+|_+$/g, '')
     .toLowerCase();
 
+const COMPANY_PROFILE = {
+  fantasyName: 'AutoColor System',
+  cnpj: '62.712.139/0001-15',
+  phone: '(35) 99745-9490',
+  address: 'Rua Manoel Jesuino de Carvalho - 1123',
+  cityState: 'Ouro Fino/MG',
+};
+
+const loadImageAsDataUrl = async (imagePath: string): Promise<string | null> => {
+  try {
+    const response = await fetch(imagePath);
+    if (!response.ok) return null;
+
+    const imageBlob = await response.blob();
+
+    return await new Promise<string>((resolve, reject) => {
+      const fileReader = new FileReader();
+      fileReader.onloadend = () => resolve(String(fileReader.result));
+      fileReader.onerror = () => reject(new Error('Falha ao converter imagem para base64.'));
+      fileReader.readAsDataURL(imageBlob);
+    });
+  } catch {
+    return null;
+  }
+};
+
 const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -203,9 +229,13 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
   const [settlingTotalAbatement, setSettlingTotalAbatement] = useState(false);
   const [settlingAllSales, setSettlingAllSales] = useState(false);
   const [showSettleAllConfirmModal, setShowSettleAllConfirmModal] = useState(false);
+  const [showPdfPreviewModal, setShowPdfPreviewModal] = useState(false);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+  const [pdfPreviewFileName, setPdfPreviewFileName] = useState('');
   const [customerOverview, setCustomerOverview] = useState<CustomerAccountOverview | null>(null);
   const [customerSalesHistory, setCustomerSalesHistory] = useState<CustomerSaleHistoryItem[]>([]);
   const lastCepLookup = useRef<string>('');
+  const pdfPreviewFrameRef = useRef<HTMLIFrameElement | null>(null);
 
   const fetchCustomers = async () => {
     setLoading(true);
@@ -545,86 +575,325 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
     setSettlingAllSales(false);
   };
 
-  const handleExportCustomerPdf = () => {
+  const buildCustomerPdfDocument = async () => {
     if (!selectedCustomer) return;
 
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
-    const marginX = 40;
-    const lineHeight = 16;
+    const marginX = 30;
+    const topMargin = 26;
+    const bottomMargin = 46;
     const maxTextWidth = pageWidth - marginX * 2;
-    let y = 44;
+    let y = topMargin;
 
-    const ensureSpace = (requiredHeight = lineHeight) => {
-      if (y + requiredHeight > pageHeight - 40) {
-        doc.addPage();
-        y = 44;
-      }
+    const logoDataUrl = await loadImageAsDataUrl('/icon-autocolor.png');
+
+    const drawFooter = () => {
+      const footerY = pageHeight - 24;
+      doc.setDrawColor(226, 232, 240);
+      doc.line(marginX, footerY - 12, pageWidth - marginX, footerY - 12);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(51, 65, 85);
+      doc.text('Relatório gerado automaticamente por Autocolor.System', marginX, footerY);
     };
 
-    const writeLine = (text: string, options?: { bold?: boolean; gap?: number; color?: [number, number, number] }) => {
-      const lines = doc.splitTextToSize(text, maxTextWidth) as string[];
-      ensureSpace(lines.length * lineHeight + (options?.gap ?? 0));
-      doc.setFont('helvetica', options?.bold ? 'bold' : 'normal');
-      if (options?.color) {
-        doc.setTextColor(...options.color);
-      } else {
-        doc.setTextColor(20, 24, 32);
+    const drawHeader = (continued = false) => {
+      const headerStartY = topMargin;
+      const logoSize = 40;
+      const detailsX = marginX + 52;
+
+      if (logoDataUrl) {
+        doc.addImage(logoDataUrl, 'PNG', marginX, headerStartY, logoSize, logoSize);
       }
-      lines.forEach((line) => {
-        doc.text(line, marginX, y);
-        y += lineHeight;
+
+      doc.setTextColor(0, 0, 0);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(16);
+      doc.text(COMPANY_PROFILE.fantasyName, detailsX, headerStartY + 14);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.text(`CNPJ: ${COMPANY_PROFILE.cnpj}`, detailsX, headerStartY + 28);
+      doc.text(`Tel: ${COMPANY_PROFILE.phone}`, detailsX, headerStartY + 40);
+      doc.text(`${COMPANY_PROFILE.address} - ${COMPANY_PROFILE.cityState}`, detailsX, headerStartY + 52);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.text(continued ? 'RELATÓRIO (CONTINUAÇÃO)' : 'RELATÓRIO ADMINISTRATIVO', pageWidth - marginX, headerStartY + 16, {
+        align: 'right',
       });
-      y += options?.gap ?? 0;
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Emissão: ${new Date().toLocaleDateString('pt-BR')}`, pageWidth - marginX, headerStartY + 30, {
+        align: 'right',
+      });
+
+      doc.setDrawColor(0, 0, 0);
+      doc.line(marginX, headerStartY + 62, pageWidth - marginX, headerStartY + 62);
+      y = headerStartY + 78;
     };
 
-    const writeSeparator = () => {
-      ensureSpace(14);
-      doc.setDrawColor(203, 213, 225);
-      doc.line(marginX, y, pageWidth - marginX, y);
-      y += 14;
+    const startNewPage = (continued = false) => {
+      drawFooter();
+      doc.addPage();
+      drawHeader(continued);
     };
 
-    const currentDate = new Date().toLocaleString('pt-BR');
+    const ensureSpace = (requiredHeight: number, continued = false) => {
+      if (y + requiredHeight > pageHeight - bottomMargin) {
+        startNewPage(continued);
+      }
+    };
+
     const customerDocument = selectedCustomer.cnpj || selectedCustomer.cpf || '-';
+    const totalSalesValue = Number(customerOverview?.total_sales ?? 0);
+    const totalPaidValue = Number(customerOverview?.total_paid ?? 0);
+    const totalPendingValue = Number(customerOverview?.total_pending ?? 0);
 
-    writeLine('Relatório de Compras do Cliente', { bold: true, gap: 2 });
-    writeLine(`Emitido em: ${currentDate}`, { color: [71, 85, 105], gap: 6 });
-    writeSeparator();
+    drawHeader();
 
-    writeLine(`Cliente: ${selectedCustomer.full_name}`, { bold: true });
-    writeLine(`Documento: ${customerDocument}`);
-    writeLine(`Telefone: ${selectedCustomer.phone || '-'}`);
-    writeLine(`Endereço: ${formattedAddress}`, { gap: 6 });
+    ensureSpace(72);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Comprovante do Cliente', marginX, y);
+    y += 16;
 
-    writeSeparator();
-    writeLine('Resumo financeiro', { bold: true, gap: 2 });
-    writeLine(`Total em compras: ${formatCurrency(customerOverview?.total_sales ?? 0)}`);
-    writeLine(`Valor já pago: ${formatCurrency(customerOverview?.total_paid ?? 0)}`);
-    writeLine(`Saldo pendente: ${formatCurrency(customerOverview?.total_pending ?? 0)}`);
-    writeLine(`Vendas pendentes: ${Number(customerOverview?.pending_sales_count ?? 0)}`, { gap: 8 });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.text(`Cliente: ${selectedCustomer.full_name}`, marginX, y);
+    y += 14;
+    doc.text(`Documento: ${customerDocument}`, marginX, y);
+    y += 14;
+    doc.text(`Telefone: ${selectedCustomer.phone || '-'}`, marginX, y);
+    y += 14;
+    doc.text(`Endereço: ${formattedAddress}`, marginX, y);
+    y += 20;
 
-    writeSeparator();
-    writeLine('Histórico de vendas', { bold: true, gap: 4 });
+    ensureSpace(88);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text('Resumo Financeiro', marginX, y);
+    y += 10;
+
+    const cardsGap = 10;
+    const cardsY = y;
+    const cardsWidth = (maxTextWidth - cardsGap * 2) / 3;
+    const cardHeight = 56;
+
+    const summaryCards = [
+      {
+        title: 'Total Compras',
+        value: formatCurrency(totalSalesValue),
+        fill: [219, 234, 254] as [number, number, number],
+        border: [59, 130, 246] as [number, number, number],
+        text: [30, 64, 175] as [number, number, number],
+      },
+      {
+        title: 'Pago',
+        value: formatCurrency(totalPaidValue),
+        fill: [220, 252, 231] as [number, number, number],
+        border: [34, 197, 94] as [number, number, number],
+        text: [21, 128, 61] as [number, number, number],
+      },
+      {
+        title: 'Pendente',
+        value: formatCurrency(totalPendingValue),
+        fill: [254, 226, 226] as [number, number, number],
+        border: [239, 68, 68] as [number, number, number],
+        text: [185, 28, 28] as [number, number, number],
+      },
+    ];
+
+    summaryCards.forEach((card, index) => {
+      const cardX = marginX + (cardsWidth + cardsGap) * index;
+      doc.setFillColor(...card.fill);
+      doc.setDrawColor(...card.border);
+      doc.roundedRect(cardX, cardsY, cardsWidth, cardHeight, 6, 6, 'FD');
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(...card.text);
+      doc.text(card.title, cardX + cardsWidth / 2, cardsY + 18, { align: 'center' });
+
+      doc.setFontSize(12);
+      doc.text(card.value, cardX + cardsWidth / 2, cardsY + 38, { align: 'center' });
+    });
+
+    y += cardHeight + 22;
+
+    const drawHistoryTitle = (continued = false) => {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(0, 0, 0);
+      doc.text(continued ? 'Histórico de vendas (continuação)' : 'Histórico de vendas', marginX, y);
+      y += 8;
+    };
+
+    const historyColumns = [60, 76, 82, 90, 90, 93];
+    const historyHeaders = ['Venda', 'Data', 'Status', 'Pago', 'Pendente', 'Total'];
+    const columnGap = 8;
+    const tableWidth = historyColumns.reduce((sum, value) => sum + value, 0) + columnGap * (historyColumns.length - 1);
+    const rowHeight = 20;
+    const textOffsetY = 13;
+
+    const columnStarts = historyColumns.reduce<number[]>((acc, _width, index) => {
+      if (index === 0) {
+        acc.push(marginX);
+        return acc;
+      }
+
+      acc.push(acc[index - 1] + historyColumns[index - 1] + columnGap);
+      return acc;
+    }, []);
+
+    const drawHistoryHeader = () => {
+      ensureSpace(rowHeight + 2, true);
+      doc.setFillColor(241, 245, 249);
+      doc.rect(marginX, y, tableWidth, rowHeight, 'F');
+      doc.setDrawColor(203, 213, 225);
+      doc.rect(marginX, y, tableWidth, rowHeight);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+
+      historyHeaders.forEach((header, index) => {
+        const startX = columnStarts[index];
+        const width = historyColumns[index];
+        doc.text(header, startX + width / 2, y + textOffsetY, { align: 'center' });
+      });
+
+      y += rowHeight;
+    };
+
+    drawHistoryTitle();
 
     if (customerSalesHistory.length === 0) {
-      writeLine('Nenhuma venda vinculada a este cliente.');
+      ensureSpace(20);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+      doc.text('Nenhuma venda vinculada a este cliente.', marginX, y + 12);
     } else {
-      customerSalesHistory.forEach((sale) => {
+      drawHistoryHeader();
+
+      customerSalesHistory.forEach((sale, index) => {
+        if (y + rowHeight > pageHeight - 40) {
+          startNewPage(true);
+          drawHistoryTitle(true);
+          drawHistoryHeader();
+        }
+
         const saleDate = new Date(sale.created_at).toLocaleDateString('pt-BR');
-        const statusLabel = sale.payment_status === 'pending' ? 'A prazo' : 'Pago';
-        writeLine(`Venda #${sale.sale_id} | ${saleDate} | ${statusLabel}`, { bold: true });
-        writeLine(`Pago: ${formatCurrency(sale.paid_amount)} | Falta: ${formatCurrency(sale.remaining_amount)} | Total: ${formatCurrency(sale.total)}`, {
-          color: [51, 65, 85],
-          gap: 4,
-        });
+        const statusLabel = sale.payment_status === 'paid'
+          ? 'PAGO'
+          : sale.paid_amount > 0
+            ? 'PARCIAL'
+            : 'PENDENTE';
+
+        if (index % 2 === 0) {
+          doc.setFillColor(248, 250, 252);
+          doc.rect(marginX, y, tableWidth, rowHeight, 'F');
+        }
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+
+        doc.text(`#${sale.sale_id}`, columnStarts[0] + historyColumns[0] / 2, y + textOffsetY, { align: 'center' });
+        doc.text(saleDate, columnStarts[1] + historyColumns[1] / 2, y + textOffsetY, { align: 'center' });
+
+        const statusCenterX = columnStarts[2] + historyColumns[2] / 2;
+        const statusTextWidth = doc.getTextWidth(statusLabel);
+        const badgeWidth = Math.max(44, statusTextWidth + 16);
+        const badgeHeight = 12;
+        const badgeX = statusCenterX - badgeWidth / 2;
+        const badgeY = y + 4;
+
+        if (statusLabel === 'PAGO') {
+          doc.setFillColor(187, 247, 208);
+          doc.setDrawColor(34, 197, 94);
+          doc.setTextColor(22, 101, 52);
+        } else if (statusLabel === 'PARCIAL') {
+          doc.setFillColor(254, 240, 138);
+          doc.setDrawColor(234, 179, 8);
+          doc.setTextColor(133, 77, 14);
+        } else {
+          doc.setFillColor(254, 202, 202);
+          doc.setDrawColor(239, 68, 68);
+          doc.setTextColor(153, 27, 27);
+        }
+
+        doc.roundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 3, 3, 'FD');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.text(statusLabel, statusCenterX, badgeY + 8.5, { align: 'center' });
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        doc.text(formatCurrency(sale.paid_amount), columnStarts[3] + historyColumns[3] / 2, y + textOffsetY, { align: 'center' });
+        doc.text(formatCurrency(sale.remaining_amount), columnStarts[4] + historyColumns[4] / 2, y + textOffsetY, { align: 'center' });
+        doc.text(formatCurrency(sale.total), columnStarts[5] + historyColumns[5] / 2, y + textOffsetY, { align: 'center' });
+
+        doc.setDrawColor(226, 232, 240);
+        doc.line(marginX, y + rowHeight, marginX + tableWidth, y + rowHeight);
+
+        y += rowHeight;
       });
     }
 
+    drawFooter();
+
     const safeName = sanitizeFileName(selectedCustomer.full_name) || `cliente_${selectedCustomer.id}`;
-    doc.save(`relatorio-compras-${safeName}.pdf`);
+    const fileName = `relatorio-compras-${safeName}.pdf`;
+
+    return { doc, fileName };
   };
+
+  const handleOpenCustomerPdfPreview = async () => {
+    const result = await buildCustomerPdfDocument();
+    if (!result) return;
+
+    if (pdfPreviewUrl) {
+      URL.revokeObjectURL(pdfPreviewUrl);
+    }
+
+    const blob = result.doc.output('blob');
+    const nextPreviewUrl = URL.createObjectURL(blob);
+
+    setPdfPreviewUrl(nextPreviewUrl);
+    setPdfPreviewFileName(result.fileName);
+    setShowPdfPreviewModal(true);
+  };
+
+  const handleClosePdfPreviewModal = () => {
+    setShowPdfPreviewModal(false);
+    if (pdfPreviewUrl) {
+      URL.revokeObjectURL(pdfPreviewUrl);
+      setPdfPreviewUrl(null);
+    }
+    setPdfPreviewFileName('');
+  };
+
+  const handlePrintPdfPreview = () => {
+    const iframeWindow = pdfPreviewFrameRef.current?.contentWindow;
+    if (!iframeWindow) return;
+
+    iframeWindow.focus();
+    iframeWindow.print();
+  };
+
+  useEffect(() => {
+    return () => {
+      if (pdfPreviewUrl) {
+        URL.revokeObjectURL(pdfPreviewUrl);
+      }
+    };
+  }, [pdfPreviewUrl]);
 
   const loadCustomerIntoForm = useCallback((customer: Customer, nextMode: FormMode) => {
     setSelectedCustomerId(customer.id);
@@ -1215,11 +1484,11 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
                       <h4 className="text-sm font-semibold text-slate-900">Histórico de Vendas do Cliente</h4>
                       <button
                         type="button"
-                        onClick={handleExportCustomerPdf}
+                        onClick={handleOpenCustomerPdfPreview}
                         className="inline-flex items-center gap-1.5 text-xs bg-slate-900 text-white rounded px-3 py-1.5 hover:bg-slate-800"
                       >
-                        <Icon icon="solar:download-linear" width={14} />
-                        Exportar PDF
+                        <Icon icon="solar:document-text-linear" width={14} />
+                        Ver PDF
                       </button>
                     </div>
                     <div className="mb-3 border border-slate-300 rounded-lg p-3 bg-slate-100">
@@ -1292,6 +1561,64 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
                               className="text-sm bg-emerald-600 text-white rounded px-3 py-1.5 hover:bg-emerald-700 disabled:opacity-60"
                             >
                               {settlingAllSales ? 'Quitando...' : 'Confirmar'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {showPdfPreviewModal && (
+                      <div
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+                        onClick={handleClosePdfPreviewModal}
+                      >
+                        <div
+                          className="w-full max-w-4xl rounded-lg border border-gray-200 bg-white shadow-lg overflow-hidden"
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between gap-2">
+                            <h5 className="text-sm font-semibold text-slate-900">Pré-visualização do relatório</h5>
+                            <button
+                              type="button"
+                              onClick={handleClosePdfPreviewModal}
+                              className="text-sm rounded px-2.5 py-1.5 border border-gray-200 text-slate-700 hover:bg-slate-50"
+                            >
+                              Fechar
+                            </button>
+                          </div>
+
+                          <div className="h-[70vh] bg-slate-100">
+                            {pdfPreviewUrl ? (
+                              <iframe
+                                ref={pdfPreviewFrameRef}
+                                src={pdfPreviewUrl}
+                                title="Pré-visualização do PDF"
+                                className="w-full h-full"
+                              />
+                            ) : (
+                              <div className="h-full flex items-center justify-center text-sm text-slate-500">
+                                Não foi possível carregar a pré-visualização do PDF.
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="px-4 py-3 border-t border-gray-200 bg-white flex items-center justify-end gap-2">
+                            <a
+                              href={pdfPreviewUrl ?? '#'}
+                              download={pdfPreviewFileName || 'relatorio-cliente.pdf'}
+                              className={`text-sm rounded px-3 py-1.5 border border-slate-300 text-slate-700 hover:bg-slate-50 ${
+                                pdfPreviewUrl ? '' : 'pointer-events-none opacity-60'
+                              }`}
+                            >
+                              Download
+                            </a>
+                            <button
+                              type="button"
+                              onClick={handlePrintPdfPreview}
+                              disabled={!pdfPreviewUrl}
+                              className="text-sm bg-slate-900 text-white rounded px-3 py-1.5 hover:bg-slate-800 disabled:opacity-60"
+                            >
+                              Imprimir
                             </button>
                           </div>
                         </div>
