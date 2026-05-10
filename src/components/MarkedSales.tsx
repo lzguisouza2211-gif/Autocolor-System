@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../supabase';
+import { useNavigate } from 'react-router-dom';
 
 interface PendingSale {
   id: number;
@@ -73,6 +74,7 @@ const getCustomerDocumentValue = (customer: Pick<GroupedCustomer, 'cpf' | 'cnpj'
 const getCustomerDocumentLabel = (customer: Pick<GroupedCustomer, 'cpf' | 'cnpj'>) => (customer.cnpj ? 'CNPJ' : 'CPF');
 
 const MarkedSales: React.FC = () => {
+  const navigate = useNavigate();
   const [pendingSales, setPendingSales] = useState<PendingSale[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -455,40 +457,40 @@ const MarkedSales: React.FC = () => {
           ) : (
             <div className="max-h-[360px] overflow-y-auto divide-y divide-gray-100">
               {groupedCustomers.map((customer) => (
-                <button
+                <div
                   key={customer.customerId}
-                  type="button"
-                  onClick={() => {
-                    setSelectedCustomerId(customer.customerId);
-                    setTotalAbatementValue('');
-                    setShowSettleAllConfirmModal(false);
-                    fetchCustomerDetails(customer.customerId);
-                  }}
-                  className={`w-full text-left px-4 py-3 hover:bg-slate-50 transition ${
+                  className={`px-4 py-3 hover:bg-slate-50 transition ${
                     selectedCustomerId === customer.customerId ? 'bg-slate-50' : ''
                   }`}
                 >
-                  <p className="text-sm font-medium text-slate-900">{customer.fullName}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    {getCustomerDocumentValue(customer)}
-                    {customer.phone ? ` - ${customer.phone}` : ''}
-                  </p>
-                  <p className="text-xs text-amber-700 mt-1">
-                    {customer.pendingCount} venda(s) marcada(s) -{' '}
-                    {customer.pendingTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                  </p>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCustomerId(customer.customerId);
+                      setTotalAbatementValue('');
+                      setShowSettleAllConfirmModal(false);
+                      fetchCustomerDetails(customer.customerId);
+                    }}
+                    className="w-full text-left"
+                  >
+                    <p className="text-sm font-medium text-slate-900">{customer.fullName}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {getCustomerDocumentValue(customer)}
+                      {customer.phone ? ` - ${customer.phone}` : ''}
+                    </p>
+                    <p className="text-xs text-amber-700 mt-1">
+                      {customer.pendingCount} venda(s) marcada(s) -{' '}
+                      {customer.pendingTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </p>
+                  </button>
+                </div>
               ))}
             </div>
           )}
         </div>
 
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 space-y-4 lg:col-span-9">
-          <div>
-            <h2 className="text-sm font-semibold text-slate-900">Individual do cliente</h2>
-            <p className="text-xs text-slate-500 mt-1">Selecione um cliente à esquerda para ver detalhes.</p>
-          </div>
-
+          
           {!selectedCustomer ? (
             <div className="text-sm text-slate-400">Nenhum cliente selecionado.</div>
           ) : loadingCustomerDetails ? (
@@ -501,6 +503,16 @@ const MarkedSales: React.FC = () => {
                   {getCustomerDocumentLabel(selectedCustomer)}: {getCustomerDocumentValue(selectedCustomer)}
                   {selectedCustomer.phone ? ` - ${selectedCustomer.phone}` : ''}
                 </p>
+              </div>
+
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => navigate(`/clientes/${selectedCustomer.customerId}`)}
+                  className="text-[11px] bg-black border border-slate-300 text-white rounded-md px-2 py-1.5 hover:bg-slate-800 disabled:opacity-60 whitespace-nowrap"
+                >
+                  Ver cliente
+                </button>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
