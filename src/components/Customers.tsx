@@ -609,7 +609,7 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
       doc.setTextColor(...palette.gray700);
-      doc.text('AUTOCOLOR.SYSTEM • RELATÓRIO FINANCEIRO • PADRÃO ERP INDUSTRIAL', marginX, footerY);
+      doc.text('AutoColor.System • Relatório Financeiro', marginX, footerY);
       doc.text(`PÁGINA ${doc.getCurrentPageInfo().pageNumber}`, pageWidth - marginX, footerY, { align: 'right' });
     };
 
@@ -704,23 +704,6 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
     doc.setDrawColor(...palette.gray200);
     doc.line(marginX, y, pageWidth - marginX, y);
     y += 16;
-
-    ensureSpace(60);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.setTextColor(...palette.blue800);
-    doc.text('Detalhes Técnicos', marginX, y);
-    y += 13;
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(...palette.gray700);
-    doc.text(`Código do cliente: ${selectedCustomer.id}`, marginX, y);
-    doc.text(`Módulo: Financeiro > Clientes`, marginX + 200, y);
-    y += 12;
-    doc.text(`Timestamp: ${pdfGeneratedAt.toLocaleString('pt-BR')}`, marginX, y);
-    doc.text('Versão layout: ERP-IND v1', marginX + 200, y);
-    y += 18;
 
     ensureSpace(88);
     doc.setFont('helvetica', 'bold');
