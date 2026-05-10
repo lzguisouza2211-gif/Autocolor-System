@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../supabase';
 import { useNavigate } from 'react-router-dom';
 
@@ -72,6 +72,18 @@ interface GroupedCustomer {
 
 const getCustomerDocumentValue = (customer: Pick<GroupedCustomer, 'cpf' | 'cnpj'>) => customer.cnpj || customer.cpf || '-';
 const getCustomerDocumentLabel = (customer: Pick<GroupedCustomer, 'cpf' | 'cnpj'>) => (customer.cnpj ? 'CNPJ' : 'CPF');
+const normalizePaidAmount = (total: number, paidAmount: number | null | undefined, status: 'paid' | 'pending') => {
+  if (status === 'paid') {
+    return total;
+  }
+
+  const numericPaid = Number(paidAmount ?? 0);
+  if (!Number.isFinite(numericPaid) || numericPaid < 0) {
+    return 0;
+  }
+
+  return Math.min(total, numericPaid);
+};
 
 const MarkedSales: React.FC = () => {
   const navigate = useNavigate();
@@ -89,20 +101,7 @@ const MarkedSales: React.FC = () => {
   const [settlingAllSales, setSettlingAllSales] = useState(false);
   const [showSettleAllConfirmModal, setShowSettleAllConfirmModal] = useState(false);
 
-  const normalizePaidAmount = (total: number, paidAmount: number | null | undefined, status: 'paid' | 'pending') => {
-    if (status === 'paid') {
-      return total;
-    }
-
-    const numericPaid = Number(paidAmount ?? 0);
-    if (!Number.isFinite(numericPaid) || numericPaid < 0) {
-      return 0;
-    }
-
-    return Math.min(total, numericPaid);
-  };
-
-  const fetchPendingSales = async () => {
+  const fetchPendingSales = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -155,7 +154,7 @@ const MarkedSales: React.FC = () => {
 
     setPendingSales(normalizedSales);
     setLoading(false);
-  };
+  }, []);
 
   const fetchCustomerDetails = async (customerId: number) => {
     setLoadingCustomerDetails(true);
@@ -398,7 +397,7 @@ const MarkedSales: React.FC = () => {
 
   useEffect(() => {
     fetchPendingSales();
-  }, []);
+  }, [fetchPendingSales]);
 
   const groupedCustomers = useMemo(() => {
     const groupedMap = new Map<number, GroupedCustomer>();
