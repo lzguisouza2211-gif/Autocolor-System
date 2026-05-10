@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
+import { jsPDF } from 'jspdf';
 import { supabase } from '../supabase';
 import { useNavigate, useParams } from 'react-router-dom';
 
@@ -163,6 +164,21 @@ const normalizePaidAmount = (total: number, paidAmount: number | null | undefine
 
   return Math.min(total, numericPaid);
 };
+
+const formatCurrency = (value: number) =>
+  Number(value).toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  });
+
+const sanitizeFileName = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9_-]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toLowerCase();
 
 const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
   const navigate = useNavigate();
@@ -527,6 +543,87 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
     );
     await fetchCustomerFinancialData(selectedCustomerId);
     setSettlingAllSales(false);
+  };
+
+  const handleExportCustomerPdf = () => {
+    if (!selectedCustomer) return;
+
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const marginX = 40;
+    const lineHeight = 16;
+    const maxTextWidth = pageWidth - marginX * 2;
+    let y = 44;
+
+    const ensureSpace = (requiredHeight = lineHeight) => {
+      if (y + requiredHeight > pageHeight - 40) {
+        doc.addPage();
+        y = 44;
+      }
+    };
+
+    const writeLine = (text: string, options?: { bold?: boolean; gap?: number; color?: [number, number, number] }) => {
+      const lines = doc.splitTextToSize(text, maxTextWidth) as string[];
+      ensureSpace(lines.length * lineHeight + (options?.gap ?? 0));
+      doc.setFont('helvetica', options?.bold ? 'bold' : 'normal');
+      if (options?.color) {
+        doc.setTextColor(...options.color);
+      } else {
+        doc.setTextColor(20, 24, 32);
+      }
+      lines.forEach((line) => {
+        doc.text(line, marginX, y);
+        y += lineHeight;
+      });
+      y += options?.gap ?? 0;
+    };
+
+    const writeSeparator = () => {
+      ensureSpace(14);
+      doc.setDrawColor(203, 213, 225);
+      doc.line(marginX, y, pageWidth - marginX, y);
+      y += 14;
+    };
+
+    const currentDate = new Date().toLocaleString('pt-BR');
+    const customerDocument = selectedCustomer.cnpj || selectedCustomer.cpf || '-';
+
+    writeLine('Relatório de Compras do Cliente', { bold: true, gap: 2 });
+    writeLine(`Emitido em: ${currentDate}`, { color: [71, 85, 105], gap: 6 });
+    writeSeparator();
+
+    writeLine(`Cliente: ${selectedCustomer.full_name}`, { bold: true });
+    writeLine(`Documento: ${customerDocument}`);
+    writeLine(`Telefone: ${selectedCustomer.phone || '-'}`);
+    writeLine(`Endereço: ${formattedAddress}`, { gap: 6 });
+
+    writeSeparator();
+    writeLine('Resumo financeiro', { bold: true, gap: 2 });
+    writeLine(`Total em compras: ${formatCurrency(customerOverview?.total_sales ?? 0)}`);
+    writeLine(`Valor já pago: ${formatCurrency(customerOverview?.total_paid ?? 0)}`);
+    writeLine(`Saldo pendente: ${formatCurrency(customerOverview?.total_pending ?? 0)}`);
+    writeLine(`Vendas pendentes: ${Number(customerOverview?.pending_sales_count ?? 0)}`, { gap: 8 });
+
+    writeSeparator();
+    writeLine('Histórico de vendas', { bold: true, gap: 4 });
+
+    if (customerSalesHistory.length === 0) {
+      writeLine('Nenhuma venda vinculada a este cliente.');
+    } else {
+      customerSalesHistory.forEach((sale) => {
+        const saleDate = new Date(sale.created_at).toLocaleDateString('pt-BR');
+        const statusLabel = sale.payment_status === 'pending' ? 'A prazo' : 'Pago';
+        writeLine(`Venda #${sale.sale_id} | ${saleDate} | ${statusLabel}`, { bold: true });
+        writeLine(`Pago: ${formatCurrency(sale.paid_amount)} | Falta: ${formatCurrency(sale.remaining_amount)} | Total: ${formatCurrency(sale.total)}`, {
+          color: [51, 65, 85],
+          gap: 4,
+        });
+      });
+    }
+
+    const safeName = sanitizeFileName(selectedCustomer.full_name) || `cliente_${selectedCustomer.id}`;
+    doc.save(`relatorio-compras-${safeName}.pdf`);
   };
 
   const loadCustomerIntoForm = useCallback((customer: Customer, nextMode: FormMode) => {
@@ -1114,7 +1211,17 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
                   </div>
 
                   <div>
-                    <h4 className="text-sm font-semibold text-slate-900 mb-2">Histórico de Vendas do Cliente</h4>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+                      <h4 className="text-sm font-semibold text-slate-900">Histórico de Vendas do Cliente</h4>
+                      <button
+                        type="button"
+                        onClick={handleExportCustomerPdf}
+                        className="inline-flex items-center gap-1.5 text-xs bg-slate-900 text-white rounded px-3 py-1.5 hover:bg-slate-800"
+                      >
+                        <Icon icon="solar:download-linear" width={14} />
+                        Exportar PDF
+                      </button>
+                    </div>
                     <div className="mb-3 border border-slate-300 rounded-lg p-3 bg-slate-100">
                       <p className="text-xs text-slate-500 mb-2">Abater no saldo total do cliente</p>
                       <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-end">
