@@ -579,25 +579,38 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
     if (!selectedCustomer) return;
 
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    const pdfGeneratedAt = new Date();
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const marginX = 30;
     const topMargin = 26;
     const bottomMargin = 46;
     const maxTextWidth = pageWidth - marginX * 2;
+    const palette = {
+      white: [255, 255, 255] as [number, number, number],
+      gray50: [248, 250, 252] as [number, number, number],
+      gray100: [241, 245, 249] as [number, number, number],
+      gray200: [226, 232, 240] as [number, number, number],
+      gray400: [148, 163, 184] as [number, number, number],
+      gray700: [51, 65, 85] as [number, number, number],
+      blue900: [15, 23, 42] as [number, number, number],
+      blue800: [30, 41, 59] as [number, number, number],
+    };
     let y = topMargin;
 
     const logoDataUrl = await loadImageAsDataUrl('/icon-autocolor.png');
 
     const drawFooter = () => {
       const footerY = pageHeight - 24;
-      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.4);
+      doc.setDrawColor(...palette.gray200);
       doc.line(marginX, footerY - 12, pageWidth - marginX, footerY - 12);
 
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(51, 65, 85);
-      doc.text('Relatório gerado automaticamente por Autocolor.System', marginX, footerY);
+      doc.setFontSize(8);
+      doc.setTextColor(...palette.gray700);
+      doc.text('AUTOCOLOR.SYSTEM • RELATÓRIO FINANCEIRO • PADRÃO ERP INDUSTRIAL', marginX, footerY);
+      doc.text(`PÁGINA ${doc.getCurrentPageInfo().pageNumber}`, pageWidth - marginX, footerY, { align: 'right' });
     };
 
     const drawHeader = (continued = false) => {
@@ -609,29 +622,43 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
         doc.addImage(logoDataUrl, 'PNG', marginX, headerStartY, logoSize, logoSize);
       }
 
-      doc.setTextColor(0, 0, 0);
+      doc.setTextColor(...palette.blue900);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(16);
       doc.text(COMPANY_PROFILE.fantasyName, detailsX, headerStartY + 14);
 
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
+      doc.setTextColor(...palette.gray700);
       doc.text(`CNPJ: ${COMPANY_PROFILE.cnpj}`, detailsX, headerStartY + 28);
       doc.text(`Tel: ${COMPANY_PROFILE.phone}`, detailsX, headerStartY + 40);
       doc.text(`${COMPANY_PROFILE.address} - ${COMPANY_PROFILE.cityState}`, detailsX, headerStartY + 52);
 
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(10);
+      doc.setTextColor(...palette.blue800);
       doc.text(continued ? 'RELATÓRIO (CONTINUAÇÃO)' : 'RELATÓRIO ADMINISTRATIVO', pageWidth - marginX, headerStartY + 16, {
         align: 'right',
       });
       doc.setFont('helvetica', 'normal');
-      doc.text(`Emissão: ${new Date().toLocaleDateString('pt-BR')}`, pageWidth - marginX, headerStartY + 30, {
+      doc.setFontSize(8);
+      doc.setTextColor(...palette.gray400);
+      doc.text('DOC: FIN-CLI-ERP', pageWidth - marginX, headerStartY + 27, {
+        align: 'right',
+      });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(...palette.gray700);
+      doc.text(`Emissão: ${pdfGeneratedAt.toLocaleDateString('pt-BR')}`, pageWidth - marginX, headerStartY + 42, {
         align: 'right',
       });
 
-      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.6);
+      doc.setDrawColor(...palette.blue900);
       doc.line(marginX, headerStartY + 62, pageWidth - marginX, headerStartY + 62);
+      doc.setLineWidth(0.3);
+      doc.setDrawColor(...palette.gray200);
+      doc.line(marginX, headerStartY + 66, pageWidth - marginX, headerStartY + 66);
       y = headerStartY + 78;
     };
 
@@ -657,12 +684,13 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
     ensureSpace(72);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
-    doc.setTextColor(0, 0, 0);
+    doc.setTextColor(...palette.blue900);
     doc.text('Comprovante do Cliente', marginX, y);
     y += 16;
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
+    doc.setTextColor(...palette.gray700);
     doc.text(`Cliente: ${selectedCustomer.full_name}`, marginX, y);
     y += 14;
     doc.text(`Documento: ${customerDocument}`, marginX, y);
@@ -670,11 +698,34 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
     doc.text(`Telefone: ${selectedCustomer.phone || '-'}`, marginX, y);
     y += 14;
     doc.text(`Endereço: ${formattedAddress}`, marginX, y);
-    y += 20;
+
+    y += 18;
+    doc.setLineWidth(0.3);
+    doc.setDrawColor(...palette.gray200);
+    doc.line(marginX, y, pageWidth - marginX, y);
+    y += 16;
+
+    ensureSpace(60);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(...palette.blue800);
+    doc.text('Detalhes Técnicos', marginX, y);
+    y += 13;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...palette.gray700);
+    doc.text(`Código do cliente: ${selectedCustomer.id}`, marginX, y);
+    doc.text(`Módulo: Financeiro > Clientes`, marginX + 200, y);
+    y += 12;
+    doc.text(`Timestamp: ${pdfGeneratedAt.toLocaleString('pt-BR')}`, marginX, y);
+    doc.text('Versão layout: ERP-IND v1', marginX + 200, y);
+    y += 18;
 
     ensureSpace(88);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
+    doc.setTextColor(...palette.blue900);
     doc.text('Resumo Financeiro', marginX, y);
     y += 10;
 
@@ -687,23 +738,23 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
       {
         title: 'Total Compras',
         value: formatCurrency(totalSalesValue),
-        fill: [219, 234, 254] as [number, number, number],
-        border: [59, 130, 246] as [number, number, number],
-        text: [30, 64, 175] as [number, number, number],
+        fill: palette.white,
+        border: palette.gray200,
+        text: palette.blue900,
       },
       {
         title: 'Pago',
         value: formatCurrency(totalPaidValue),
-        fill: [220, 252, 231] as [number, number, number],
-        border: [34, 197, 94] as [number, number, number],
-        text: [21, 128, 61] as [number, number, number],
+        fill: palette.gray50,
+        border: palette.gray200,
+        text: palette.blue800,
       },
       {
         title: 'Pendente',
         value: formatCurrency(totalPendingValue),
-        fill: [254, 226, 226] as [number, number, number],
-        border: [239, 68, 68] as [number, number, number],
-        text: [185, 28, 28] as [number, number, number],
+        fill: palette.gray100,
+        border: palette.gray400,
+        text: palette.blue900,
       },
     ];
 
@@ -711,7 +762,8 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
       const cardX = marginX + (cardsWidth + cardsGap) * index;
       doc.setFillColor(...card.fill);
       doc.setDrawColor(...card.border);
-      doc.roundedRect(cardX, cardsY, cardsWidth, cardHeight, 6, 6, 'FD');
+      doc.setLineWidth(0.5);
+      doc.roundedRect(cardX, cardsY, cardsWidth, cardHeight, 2, 2, 'FD');
 
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(10);
@@ -727,7 +779,7 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
     const drawHistoryTitle = (continued = false) => {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11);
-      doc.setTextColor(0, 0, 0);
+      doc.setTextColor(...palette.blue900);
       doc.text(continued ? 'Histórico de vendas (continuação)' : 'Histórico de vendas', marginX, y);
       y += 8;
     };
@@ -751,14 +803,15 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
 
     const drawHistoryHeader = () => {
       ensureSpace(rowHeight + 2, true);
-      doc.setFillColor(241, 245, 249);
+      doc.setFillColor(...palette.gray100);
       doc.rect(marginX, y, tableWidth, rowHeight, 'F');
-      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.4);
+      doc.setDrawColor(...palette.gray200);
       doc.rect(marginX, y, tableWidth, rowHeight);
 
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(10);
-      doc.setTextColor(0, 0, 0);
+      doc.setTextColor(...palette.blue800);
 
       historyHeaders.forEach((header, index) => {
         const startX = columnStarts[index];
@@ -775,7 +828,7 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
       ensureSpace(20);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
-      doc.setTextColor(0, 0, 0);
+      doc.setTextColor(...palette.gray700);
       doc.text('Nenhuma venda vinculada a este cliente.', marginX, y + 12);
     } else {
       drawHistoryHeader();
@@ -795,13 +848,13 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
             : 'PENDENTE';
 
         if (index % 2 === 0) {
-          doc.setFillColor(248, 250, 252);
+          doc.setFillColor(...palette.gray50);
           doc.rect(marginX, y, tableWidth, rowHeight, 'F');
         }
 
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(10);
-        doc.setTextColor(0, 0, 0);
+        doc.setTextColor(...palette.gray700);
 
         doc.text(`#${sale.sale_id}`, columnStarts[0] + historyColumns[0] / 2, y + textOffsetY, { align: 'center' });
         doc.text(saleDate, columnStarts[1] + historyColumns[1] / 2, y + textOffsetY, { align: 'center' });
@@ -814,32 +867,34 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
         const badgeY = y + 4;
 
         if (statusLabel === 'PAGO') {
-          doc.setFillColor(187, 247, 208);
-          doc.setDrawColor(34, 197, 94);
-          doc.setTextColor(22, 101, 52);
+          doc.setFillColor(...palette.gray50);
+          doc.setDrawColor(...palette.gray200);
+          doc.setTextColor(...palette.blue900);
         } else if (statusLabel === 'PARCIAL') {
-          doc.setFillColor(254, 240, 138);
-          doc.setDrawColor(234, 179, 8);
-          doc.setTextColor(133, 77, 14);
+          doc.setFillColor(...palette.gray100);
+          doc.setDrawColor(...palette.gray400);
+          doc.setTextColor(...palette.blue800);
         } else {
-          doc.setFillColor(254, 202, 202);
-          doc.setDrawColor(239, 68, 68);
-          doc.setTextColor(153, 27, 27);
+          doc.setFillColor(...palette.white);
+          doc.setDrawColor(...palette.gray400);
+          doc.setTextColor(...palette.gray700);
         }
 
-        doc.roundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 3, 3, 'FD');
+        doc.setLineWidth(0.4);
+        doc.roundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 2, 2, 'FD');
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(8);
         doc.text(statusLabel, statusCenterX, badgeY + 8.5, { align: 'center' });
 
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(10);
-        doc.setTextColor(0, 0, 0);
+        doc.setTextColor(...palette.gray700);
         doc.text(formatCurrency(sale.paid_amount), columnStarts[3] + historyColumns[3] / 2, y + textOffsetY, { align: 'center' });
         doc.text(formatCurrency(sale.remaining_amount), columnStarts[4] + historyColumns[4] / 2, y + textOffsetY, { align: 'center' });
         doc.text(formatCurrency(sale.total), columnStarts[5] + historyColumns[5] / 2, y + textOffsetY, { align: 'center' });
 
-        doc.setDrawColor(226, 232, 240);
+        doc.setLineWidth(0.3);
+        doc.setDrawColor(...palette.gray200);
         doc.line(marginX, y + rowHeight, marginX + tableWidth, y + rowHeight);
 
         y += rowHeight;
