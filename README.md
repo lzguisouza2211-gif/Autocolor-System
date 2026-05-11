@@ -1,81 +1,68 @@
-
 # AutoColor System
 
-AutoColor-System é um sistema web profissional de gestão de estoque e vendas (PDV) desenvolvido para comércios de tintas automotivas e produtos automotivos, incluindo controle de insumos, fabricação de sprays personalizados e operação de vendas no balcão.
+Sistema web de gestão para operação de loja com foco em:
+- cadastro e controle de produtos;
+- PDV com vendas à vista e a prazo;
+- histórico de vendas com edição e soft delete;
+- módulo de clientes e contas a receber;
+- integração com servidor local de impressão térmica.
 
-O foco do projeto é oferecer uma solução simples, moderna e eficiente para pequenos e médios negócios. Atualmente, o sistema está em estágio de MVP, com funcionalidades principais de cadastro de produtos, controle de estoque e dashboard.
+## Stack atual
 
-## 🚀 Tecnologias Utilizadas
+- Frontend: React 19 + TypeScript + Vite + Tailwind CSS
+- Banco/Auth: Supabase (PostgreSQL + Auth + RLS)
+- Impressão local: Node.js + Express (`print-server.cjs`)
+- Deploy frontend: Vercel (SPA rewrite para `index.html`)
 
-**Frontend:**
-- React
-- TypeScript
-- Tailwind CSS
+## Módulos existentes
 
-**Backend & Banco de Dados:**
-- Supabase (PostgreSQL)
+- `Dashboard`: métricas de produtos, vendas do mês, estoque crítico e vendas a prazo
+- `Produtos`: CRUD, soft delete e reabastecimento via leitura de código de barras
+- `Vendas (PDV)`: carrinho, descontos, venda à vista/a prazo, cliente obrigatório no prazo, impressão
+- `Histórico de Vendas` (admin): detalhamento, edição de itens, troca de cliente, soft delete
+- `Vendas a Prazo` (admin): visão por cliente, abatimentos parciais, quitação individual e total
+- `Clientes` (admin): CRUD, consulta de CEP, resumo financeiro, relatório PDF administrativo
+- `Autenticação`: login por e-mail/senha via Supabase Auth + proteção de rotas
 
-**Infraestrutura:**
-- Vercel (deploy do frontend)
-## 📦 Arquitetura do Sistema
-O sistema é organizado em camadas:
+## Requisitos
 
-- Interface Web (Frontend)
-- API / Integração com Supabase
-- Banco de Dados relacional
+- Node.js 18+
+- Projeto Supabase com migrations aplicadas
 
-Principais tabelas:
-- Produtos
-- Estoque
-- Movimentações
-<!-- As tabelas de Pedidos e Itens do Pedido estão planejadas para versões futuras. -->
-## 📊 Funcionalidades (MVP)
+## Setup local
 
-### Produtos
-- Cadastro e edição de produtos automotivos
-- Organização por categorias (tintas, sprays, vernizes, acessórios, insumos)
-- Definição de custo e preço de venda
+1. Instalar dependências:
+	```bash
+	npm install
+	```
+2. Criar `.env` (ou usar script `setup-env.sh`) com:
+	- `VITE_PUBLIC_SUPABASE_URL`
+	- `VITE_PUBLIC_SUPABASE_ANON_KEY`
+3. Rodar frontend:
+	```bash
+	npm run dev
+	```
+4. (Opcional) Rodar servidor de impressão local:
+	```bash
+	node print-server.cjs
+	```
 
-### Estoque
-- Controle automático de quantidade por produto
-- Atualização via movimentações de entrada e saída
-- Indicadores de estoque crítico
+## Scripts disponíveis
 
-### Movimentações
-- Registro de entradas (compra/reposição)
-- Registro de saídas (vendas/ajustes)
-- Histórico completo por produto (em desenvolvimento)
+- `npm run dev` — ambiente de desenvolvimento Vite
+- `npm run build` — build de produção (`tsc -b && vite build`)
+- `npm run lint` — lint da base TypeScript/React
+- `npm run preview` — preview do build
 
-### Vendas (PDV)
-- Tela de vendas/PDV em desenvolvimento (funcionalidade básica planejada)
+## Estrutura principal
 
-### Dashboard
-- Visão geral de produtos
-- Estoque atual
-- Vendas (em breve)
-- Alertas de baixo estoque
-## 📱 Responsividade
-- Interface adaptada para desktop e mobile
-- Uso otimizado para operação com uma mão no celular
-- Layout moderno e corporativo
-## 🎯 Objetivo
-Desenvolver um MVP robusto e escalável que possa evoluir para um sistema completo de gestão comercial automotiva.
+- `src/components` — módulos de tela (PDV, histórico, produtos, clientes etc.)
+- `src/contexts` — contexto de autenticação
+- `migrations` — evolução do banco (schema, políticas RLS, triggers)
+- `print-server.cjs` — API local `POST /api/print`
+- `start-printer.bat` — bootstrap do servidor de impressão no Windows
 
-O projeto foi pensado para:
-- Uso real em lojas físicas
-- Possível comercialização futura
-- Expansão de funcionalidades
-## 🧩 Expansões Futuras (planejadas)
-- Gestão de fornecedores
-- Relatórios financeiros
-- Controle de clientes
-- Histórico de preços
-- Permissões de usuários
-- Integração com impressoras fiscais
+## Documentação técnica
 
-## 📌 Status do Projeto
-🚧 Em desenvolvimento ativo (MVP)
-
----
-## 👨‍💻 Autor
-Guilherme
+Toda a documentação operacional e técnica está em `docs/`.
+Comece por: [`docs/README.md`](docs/README.md)

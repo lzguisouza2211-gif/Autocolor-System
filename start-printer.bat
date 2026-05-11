@@ -7,9 +7,20 @@ REM ============================================
 REM Define o titulo da janela
 title AutoColor - Servidor de Impressao (Rodando...)
 
-REM Muda para o diretório onde o projeto está instalado
-REM IMPORTANTE: Altere o caminho abaixo para o local onde você instalou o projeto
-cd /d "C:\Users\Toqueto\Documents\AutoColor-System\Autocolor-System"
+REM Muda para o diretório onde ESTE .bat está (portátil para qualquer máquina)
+cd /d "%~dp0"
+
+REM Garante que o servidor existe na mesma pasta do .bat
+if not exist "print-server.cjs" (
+    echo.
+    echo ============================================
+    echo ERRO: Arquivo print-server.cjs nao encontrado!
+    echo Coloque este .bat na pasta raiz do projeto.
+    echo ============================================
+    echo.
+    pause
+    exit /b 1
+)
 
 REM Verifica se o Node.js está instalado
 where node >nul 2>nul
