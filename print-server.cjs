@@ -45,7 +45,13 @@ function formatReceiptAsText(items, total, payment, company, receiptType, saleTy
   const now = new Date();
   const dataHora = `${now.toLocaleDateString('pt-BR')} ${now.toLocaleTimeString('pt-BR')}`;
 
-  const safeCustomerName = customer?.full_name || 'Não informado';
+  const safeCustomerName = [
+    customer?.full_name,
+    customer?.name,
+    customer?.customer_name,
+    customer?.nome,
+    customer?.customers?.full_name,
+  ].find((value) => typeof value === 'string' && value.trim() !== '')?.trim() || 'Não informado';
   const safeStreet = customer?.street || '';
   const safeNumber = customer?.address_number || '';
   const safeNeighborhood = customer?.neighborhood || '';
@@ -106,11 +112,31 @@ function formatReceiptAsText(items, total, payment, company, receiptType, saleTy
 }
 
 app.post('/api/print', async (req, res) => {
-  const { items, total, payment, company, receiptType, saleType, customer } = req.body;
+  const { items, total, payment, company, receiptType, saleType, customer, customerName } = req.body;
+  const normalizedCustomer = customer || (customerName ? { full_name: customerName } : null);
+
+  const resolvedCustomerName = [
+    normalizedCustomer?.full_name,
+    normalizedCustomer?.name,
+    normalizedCustomer?.customer_name,
+    normalizedCustomer?.nome,
+    normalizedCustomer?.customers?.full_name,
+  ].find((value) => typeof value === 'string' && value.trim() !== '')?.trim() || 'Não informado';
+
+  console.log('🧾 [/api/print] Payload recebido:', {
+    receiptType,
+    saleType,
+    payment,
+    total,
+    itemsCount: Array.isArray(items) ? items.length : 0,
+    customer,
+    customerName,
+    resolvedCustomerName,
+  });
 
   // Modo teste no Linux - salva em arquivo
   if (isLinux) {
-    const receiptText = formatReceiptAsText(items, total, payment, company, receiptType, saleType, customer);
+    const receiptText = formatReceiptAsText(items, total, payment, company, receiptType, saleType, normalizedCustomer);
     const fileName = `recibo-teste-${receiptType || 'default'}.txt`;
     fs.writeFileSync(fileName, receiptText);
     console.log(`✅ Recibo salvo em ${fileName} (modo teste Linux)`);
@@ -120,7 +146,7 @@ app.post('/api/print', async (req, res) => {
   // Impressão no Windows com USB
   if (isWindows) {
     try {
-      const result = await printReceipt(items, total, payment, company, receiptType, saleType, customer);
+      const result = await printReceipt(items, total, payment, company, receiptType, saleType, normalizedCustomer);
       res.json(result);
     } catch (err) {
       console.error('❌ Erro ao imprimir:', err.message);
