@@ -48,4 +48,5 @@ app.post('/api/print', async (req, res) => {
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`Print server running on port ${PORT}`);
+  console.log('Print server runtime: print-server.ts');
 });

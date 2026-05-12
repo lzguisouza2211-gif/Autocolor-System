@@ -170,6 +170,7 @@ app.listen(PORT, () => {
   console.log('============================================');
   console.log('🖨️  Servidor de Impressão AutoColor');
   console.log('============================================');
+  console.log('📌 Runtime: print-server.cjs');
   console.log(`📡 Porta: ${PORT}`);
   console.log(`📍 Plataforma: ${process.platform}`);
   if (isWindows) {
