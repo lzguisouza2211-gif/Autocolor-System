@@ -1273,7 +1273,7 @@ const PDV: React.FC = () => {
               )}
 
               {saleType === 'credit' && customerPickerExpanded && (
-                <div className="border border-slate-200 rounded-xl bg-slate-50 p-3 space-y-2">
+                <div className="border border-slate-200 rounded-xl bg-slate-50 p-3 space-y-2 animate-slideUp">
                   <div className="flex items-center gap-2">
                     <input
                       ref={customerInputRef}
@@ -1306,7 +1306,7 @@ const PDV: React.FC = () => {
                   </div>
 
                   {showCustomerDropdown && (
-                    <div className="bg-white border border-gray-200 rounded-lg shadow-sm max-h-64 overflow-y-auto">
+                    <div className="bg-white border border-gray-200 rounded-lg shadow-sm max-h-64 overflow-y-auto animate-slideDown">
                       {loadingCustomers ? (
                         <div className="px-3 py-3 text-sm text-slate-400">Carregando clientes...</div>
                       ) : filteredCustomers.length > 0 ? (
