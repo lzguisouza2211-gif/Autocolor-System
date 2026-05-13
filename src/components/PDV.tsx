@@ -728,6 +728,8 @@ const PDV: React.FC = () => {
                 company: { name: 'AutoColor' }
               })
             });
+            setSuccess('Notinha foi enviada para impressão!');
+            setTimeout(() => setSuccess(null), 2000);
           } else {
             await fetch('http://localhost:4000/api/print', {
               method: 'POST',
@@ -742,6 +744,8 @@ const PDV: React.FC = () => {
                 company: { name: 'AutoColor' }
               })
             });
+            setSuccess('Notinha foi enviada para impressão!');
+            setTimeout(() => setSuccess(null), 2000);
           }
         } catch (err) {
           console.error('Erro ao imprimir recibo:', err);

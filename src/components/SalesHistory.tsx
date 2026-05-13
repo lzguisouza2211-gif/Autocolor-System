@@ -78,6 +78,7 @@ const SalesHistory: React.FC = () => {
     const [customers, setCustomers] = useState<CustomerOption[]>([]);
     const [loadingCustomers, setLoadingCustomers] = useState(false);
     const [editedCustomerId, setEditedCustomerId] = useState<number | null>(null);
+    const [success, setSuccess] = useState<string | null>(null);
 
     useEffect(() => {
       if (!editMode) return;
@@ -336,7 +337,13 @@ const SalesHistory: React.FC = () => {
               </button>
             </div>
 
-            <div className="p-6 space-y-6">
+            <div className="p-6 space-y-6 relative">
+              {/* Notificação de sucesso */}
+              {success && (
+                <div className="absolute top-6 right-6 bg-green-100 text-green-800 text-xs rounded px-3 py-2 shadow transition animate-fadeIn" style={{zIndex: 20}}>
+                  {success}
+                </div>
+              )}
               {/* Informações gerais */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -687,8 +694,11 @@ const SalesHistory: React.FC = () => {
                               })
                             });
                           }
+                          setSuccess('Notinha foi enviada para impressão!');
+                          setTimeout(() => setSuccess(null), 2000);
                         } catch (err) {
-                          alert('Erro ao imprimir pedido. Verifique o servidor de impressão.');
+                          setSuccess('Erro ao imprimir pedido. Verifique o servidor de impressão.');
+                          setTimeout(() => setSuccess(null), 2000);
                         }
                       }}
                       className="w-full sm:w-auto bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-medium text-sm"
