@@ -45,6 +45,15 @@ interface CustomerAccountOverview {
   last_sale_at: string | null;
 }
 
+interface SaleItem {
+  product_id: number | null;
+  quantity: number;
+  price: number;
+  discount: number;
+  custom_name: string | null;
+  products: { name: string } | null;
+}
+
 interface CustomerSaleHistoryItem {
   sale_id: number;
   created_at: string;
@@ -53,6 +62,7 @@ interface CustomerSaleHistoryItem {
   remaining_amount: number;
   payment_status: 'paid' | 'pending';
   paid_at: string | null;
+  items: SaleItem[];
 }
 
 interface CustomerSalesRow {
@@ -62,6 +72,14 @@ interface CustomerSalesRow {
   created_at: string;
   payment_status: 'paid' | 'pending' | null;
   paid_at: string | null;
+  sale_items: Array<{
+    product_id: number | null;
+    quantity: number;
+    price: number;
+    discount: number;
+    custom_name: string | null;
+    products: { name: string } | null;
+  }> | null;
 }
 
 type FormMode = 'create' | 'edit' | 'view';
@@ -325,7 +343,17 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
     setDetailsLoading(true);
     const { data: salesData, error: salesError } = await supabase
       .from('sales')
-      .select('id, total, paid_amount, created_at, payment_status, paid_at')
+      .select(`
+        id, total, paid_amount, created_at, payment_status, paid_at,
+        sale_items!fk_sale_items_sale_id (
+          product_id,
+          quantity,
+          price,
+          discount,
+          custom_name,
+          products (name)
+        )
+      `)
       .eq('customer_id', customerId)
       .is('deleted_at', null)
       .order('created_at', { ascending: false });
@@ -353,6 +381,14 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
         remaining_amount: Math.max(0, total - paidAmount),
         payment_status: paymentStatus,
         paid_at: sale.paid_at,
+        items: (sale.sale_items ?? []).map((item) => ({
+          product_id: item.product_id,
+          quantity: Number(item.quantity),
+          price: Number(item.price),
+          discount: Number(item.discount ?? 0),
+          custom_name: item.custom_name ?? null,
+          products: item.products ?? null,
+        })),
       };
     });
 
@@ -816,8 +852,11 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
     } else {
       drawHistoryHeader();
 
+      const itemRowHeight = 14;
+
       customerSalesHistory.forEach((sale, index) => {
-        if (y + rowHeight > pageHeight - 40) {
+        const blockHeight = rowHeight + sale.items.length * itemRowHeight + 6;
+        if (y + blockHeight > pageHeight - 40) {
           startNewPage(true);
           drawHistoryTitle(true);
           drawHistoryHeader();
@@ -830,11 +869,13 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
             ? 'PARCIAL'
             : 'PENDENTE';
 
+        // fundo alternado cobre o bloco inteiro (header + itens)
         if (index % 2 === 0) {
           doc.setFillColor(...palette.gray50);
-          doc.rect(marginX, y, tableWidth, rowHeight, 'F');
+          doc.rect(marginX, y, tableWidth, rowHeight + sale.items.length * itemRowHeight + 4, 'F');
         }
 
+        // --- linha de resumo da venda ---
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(10);
         doc.setTextColor(...palette.gray700);
@@ -876,11 +917,43 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
         doc.text(formatCurrency(sale.remaining_amount), columnStarts[4] + historyColumns[4] / 2, y + textOffsetY, { align: 'center' });
         doc.text(formatCurrency(sale.total), columnStarts[5] + historyColumns[5] / 2, y + textOffsetY, { align: 'center' });
 
+        y += rowHeight;
+
+        // --- sub-linhas de itens ---
+        if (sale.items.length > 0) {
+          const itemIndent = marginX + 16;
+          const itemNameMaxWidth = columnStarts[5] - itemIndent - 8;
+          const subtotalX = columnStarts[5] + historyColumns[5];
+
+          sale.items.forEach((item) => {
+            const productName = item.custom_name || item.products?.name || 'Produto';
+            const unitPrice = item.price - item.discount;
+            const subtotal = unitPrice * item.quantity;
+            const qtyLabel = `${item.quantity}x  ${formatCurrency(unitPrice)}`;
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            doc.setTextColor(...palette.gray400);
+
+            // nome do produto (truncado se necessário)
+            const truncatedName = doc.getTextWidth(productName) > itemNameMaxWidth
+              ? productName.substring(0, Math.floor(productName.length * (itemNameMaxWidth / doc.getTextWidth(productName))) - 1) + '…'
+              : productName;
+
+            doc.text(`• ${truncatedName}`, itemIndent, y + 10);
+            doc.text(qtyLabel, columnStarts[3] + historyColumns[3] / 2, y + 10, { align: 'center' });
+            doc.text(formatCurrency(subtotal), subtotalX, y + 10, { align: 'right' });
+
+            y += itemRowHeight;
+          });
+
+          y += 4; // espaço após os itens
+        }
+
+        // linha separadora entre vendas
         doc.setLineWidth(0.3);
         doc.setDrawColor(...palette.gray200);
-        doc.line(marginX, y + rowHeight, marginX + tableWidth, y + rowHeight);
-
-        y += rowHeight;
+        doc.line(marginX, y, marginX + tableWidth, y);
       });
     }
 

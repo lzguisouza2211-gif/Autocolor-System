@@ -1306,7 +1306,7 @@ const PDV: React.FC = () => {
                   </div>
 
                   {showCustomerDropdown && (
-                    <div className="bg-white border border-gray-200 rounded-lg shadow-sm max-h-64 overflow-y-auto animate-slideDown">
+                    <div className="bg-white border border-gray-200 rounded-lg shadow-sm max-h-32 md:max-h-48 lg:max-h-64 overflow-y-auto animate-slideDown">
                       {loadingCustomers ? (
                         <div className="px-3 py-3 text-sm text-slate-400">Carregando clientes...</div>
                       ) : filteredCustomers.length > 0 ? (

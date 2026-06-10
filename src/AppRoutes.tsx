@@ -12,6 +12,7 @@ import PDV from './components/PDV';
 import SalesHistory from './components/SalesHistory';
 import Customers from './components/Customers';
 import MarkedSales from './components/MarkedSales';
+import Financeiro from './components/Financeiro';
 import { supabase } from './supabase';
 import './App.css';
 
@@ -238,6 +239,16 @@ function App() {
               <AdminRoute>
                 <MainLayout>
                   <MarkedSales />
+                </MainLayout>
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/financeiro"
+            element={
+              <AdminRoute>
+                <MainLayout>
+                  <Financeiro />
                 </MainLayout>
               </AdminRoute>
             }
