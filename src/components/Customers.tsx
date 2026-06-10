@@ -78,7 +78,7 @@ interface CustomerSalesRow {
     price: number;
     discount: number;
     custom_name: string | null;
-    products: { name: string } | null;
+    products: { name: string }[] | null;
   }> | null;
 }
 
@@ -387,7 +387,7 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
           price: Number(item.price),
           discount: Number(item.discount ?? 0),
           custom_name: item.custom_name ?? null,
-          products: item.products ?? null,
+          products: Array.isArray(item.products) ? (item.products[0] ?? null) : (item.products ?? null),
         })),
       };
     });
