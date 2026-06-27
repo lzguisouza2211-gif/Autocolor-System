@@ -795,11 +795,13 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
 
     y += cardHeight + 22;
 
+    const pendingSalesHistory = customerSalesHistory.filter((sale) => sale.payment_status === 'pending');
+
     const drawHistoryTitle = (continued = false) => {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11);
       doc.setTextColor(...palette.blue900);
-      doc.text(continued ? 'Histórico de vendas (continuação)' : 'Histórico de vendas', marginX, y);
+      doc.text(continued ? 'Vendas a prazo (continuação)' : 'Vendas a prazo', marginX, y);
       y += 8;
     };
 
@@ -843,18 +845,18 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
 
     drawHistoryTitle();
 
-    if (customerSalesHistory.length === 0) {
+    if (pendingSalesHistory.length === 0) {
       ensureSpace(20);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
       doc.setTextColor(...palette.gray700);
-      doc.text('Nenhuma venda vinculada a este cliente.', marginX, y + 12);
+      doc.text('Nenhuma venda a prazo para este cliente.', marginX, y + 12);
     } else {
       drawHistoryHeader();
 
       const itemRowHeight = 14;
 
-      customerSalesHistory.forEach((sale, index) => {
+      pendingSalesHistory.forEach((sale, index) => {
         const blockHeight = rowHeight + sale.items.length * itemRowHeight + 6;
         if (y + blockHeight > pageHeight - 40) {
           startNewPage(true);
@@ -922,7 +924,7 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
         // --- sub-linhas de itens ---
         if (sale.items.length > 0) {
           const itemIndent = marginX + 16;
-          const itemNameMaxWidth = columnStarts[5] - itemIndent - 8;
+          const itemNameMaxWidth = columnStarts[2] - itemIndent - 8;
           const subtotalX = columnStarts[5] + historyColumns[5];
 
           sale.items.forEach((item) => {
@@ -941,7 +943,7 @@ const Customers: React.FC<CustomersProps> = ({ pageMode }) => {
               : productName;
 
             doc.text(`• ${truncatedName}`, itemIndent, y + 10);
-            doc.text(qtyLabel, columnStarts[3] + historyColumns[3] / 2, y + 10, { align: 'center' });
+            doc.text(qtyLabel, columnStarts[2] + historyColumns[2] / 2, y + 10, { align: 'center' });
             doc.text(formatCurrency(subtotal), subtotalX, y + 10, { align: 'right' });
 
             y += itemRowHeight;

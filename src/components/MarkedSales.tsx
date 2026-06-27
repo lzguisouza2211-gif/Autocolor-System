@@ -100,6 +100,7 @@ const MarkedSales: React.FC = () => {
   const [settlingTotalAbatement, setSettlingTotalAbatement] = useState(false);
   const [settlingAllSales, setSettlingAllSales] = useState(false);
   const [showSettleAllConfirmModal, setShowSettleAllConfirmModal] = useState(false);
+  const [printingSaleId, setPrintingSaleId] = useState<number | null>(null);
 
   const fetchPendingSales = useCallback(async () => {
     setLoading(true);
@@ -352,6 +353,56 @@ const MarkedSales: React.FC = () => {
     setSettlingTotalAbatement(false);
   };
 
+  const handlePrintSale = async (saleId: number, sale: CustomerSaleHistoryItem) => {
+    setPrintingSaleId(saleId);
+
+    try {
+      const { data: itemsData, error: itemsError } = await supabase
+        .from('sale_items')
+        .select('id, product_id, quantity, price, discount, custom_name, products(name)')
+        .eq('sale_id', saleId);
+
+      if (itemsError) throw itemsError;
+
+      const printItems = (itemsData ?? []).map((item: Record<string, unknown>) => ({
+        name:
+          typeof item.custom_name === 'string' && item.custom_name.trim()
+            ? item.custom_name
+            : ((item.products as { name?: string } | null)?.name ?? `Produto ${item.product_id}`),
+        qty: item.quantity,
+        price: item.price,
+      }));
+
+      const printCustomer = selectedCustomer ? { full_name: selectedCustomer.fullName } : null;
+      const paymentLabel = sale.payment_status === 'pending' ? 'A prazo' : 'Pago';
+      const saleType = sale.payment_status === 'pending' ? 'a_prazo' : 'a_vista';
+
+      if (sale.payment_status === 'pending' && printCustomer) {
+        await fetch('http://localhost:4000/api/print', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: printItems, total: sale.total, payment: paymentLabel, saleType, receiptType: 'customer', customer: printCustomer, company: { name: 'AutoColor' } }),
+        });
+        await fetch('http://localhost:4000/api/print', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: printItems, total: sale.total, payment: paymentLabel, saleType, receiptType: 'owner', customer: printCustomer, company: { name: 'AutoColor' } }),
+        });
+      } else {
+        await fetch('http://localhost:4000/api/print', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: printItems, total: sale.total, payment: paymentLabel, saleType, receiptType: 'default', customer: printCustomer, company: { name: 'AutoColor' } }),
+        });
+      }
+    } catch {
+      setError('Erro ao imprimir venda. Verifique o servidor de impressão.');
+      setTimeout(() => setError(null), 3000);
+    } finally {
+      setPrintingSaleId(null);
+    }
+  };
+
   const handleSettleAllPendingSales = async () => {
     if (!selectedCustomerId) return;
 
@@ -431,7 +482,7 @@ const MarkedSales: React.FC = () => {
   const selectedCustomer = groupedCustomers.find((customer) => customer.customerId === selectedCustomerId) ?? null;
 
   return (
-    <div className="space-y-6">
+    <div className="h-full flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Vendas a Prazo</h1>
         <p className="text-sm text-slate-500 mt-1">
@@ -443,8 +494,8 @@ const MarkedSales: React.FC = () => {
         <div className="border border-red-200 bg-red-50 text-red-700 rounded-lg px-3 py-2 text-sm">{error}</div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden lg:col-span-3">
+      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden lg:col-span-3 flex flex-col min-h-0">
           <div className="px-4 py-3 border-b border-gray-100">
             <h2 className="text-sm font-semibold text-slate-900">Clientes com vendas a prazo</h2>
           </div>
@@ -454,7 +505,7 @@ const MarkedSales: React.FC = () => {
           ) : groupedCustomers.length === 0 ? (
             <div className="p-6 text-sm text-slate-400">Nenhuma venda marcada no momento.</div>
           ) : (
-            <div className="max-h-[360px] overflow-y-auto divide-y divide-gray-100">
+            <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-gray-100">
               {groupedCustomers.map((customer) => (
                 <div
                   key={customer.customerId}
@@ -711,9 +762,24 @@ const MarkedSales: React.FC = () => {
                                       {settlingSaleId === sale.sale_id ? 'Baixando...' : 'Quitar'}
                                     </button>
                                   </div>
+                                  <button
+                                    type="button"
+                                    className="w-full text-[11px] bg-blue-600 text-white rounded-md px-2 py-1.5 hover:bg-blue-700 disabled:opacity-60 whitespace-nowrap"
+                                    onClick={() => handlePrintSale(sale.sale_id, sale)}
+                                    disabled={printingSaleId === sale.sale_id}
+                                  >
+                                    {printingSaleId === sale.sale_id ? 'Imprimindo...' : 'Imprimir'}
+                                  </button>
                                 </div>
                               ) : (
-                                <span className="text-xs text-slate-400">Pago</span>
+                                <button
+                                  type="button"
+                                  className="text-[11px] bg-blue-600 text-white rounded-md px-2 py-1.5 hover:bg-blue-700 disabled:opacity-60 whitespace-nowrap"
+                                  onClick={() => handlePrintSale(sale.sale_id, sale)}
+                                  disabled={printingSaleId === sale.sale_id}
+                                >
+                                  {printingSaleId === sale.sale_id ? 'Imprimindo...' : 'Imprimir'}
+                                </button>
                               )}
                             </td>
                           </tr>
