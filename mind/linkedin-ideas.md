@@ -38,3 +38,19 @@ result = subprocess.run(
 **O aprendizado:** Hooks git herdam um PATH reduzido — `~/.nvm` e `~/.local/bin` ficam de fora. A solução foi uma função `find_claude()` que tenta `shutil.which()` primeiro e cai em candidatos fixos se não encontrar.
 
 **Dica para outros devs:** Se você já usa o Claude Code no seu fluxo de trabalho, o CLI pode substituir chamadas diretas à API em automações locais — sem segredo extra, sem pip install, sem billing separado.
+
+
+
+## Ideia — 28/06/2026
+
+**Título:** O hook que se bloqueava sozinho — e como debugar loops em automações git
+
+**O problema:** Criei um hook `post-commit` que gera documentação automaticamente a cada commit. Ele roda um script Python, que faz um novo commit para salvar os arquivos gerados. Para evitar loop infinito, adicionei um guard: "se o commit incluir `mind/generate-docs.py`, cancela."
+
+O problema: `mind/generate-docs.py` **vive no repositório**. Em qualquer commit que tocasse esse arquivo — inclusive o commit inicial de setup — o hook se autobloqueava e nunca rodava.
+
+**Como resolvi:** Troquei a lógica do guard. Em vez de verificar quais arquivos foram modificados, o hook agora lê a **mensagem do commit** (`git log -1 --format=%s`). Se a mensagem contiver `[skip ci]` ou `auto-update documentation`, o hook para. Esses marcadores só aparecem nos commits gerados automaticamente pelo próprio AutoDocs — nunca nos commits humanos.
+
+**O aprendizado:** Em automações recursivas, o identificador do ciclo deve ser algo que **você controla ativamente**, não um efeito colateral. A mensagem do commit é definida intencionalmente; a lista de arquivos é um acidente de contexto.
+
+**Dica para outros devs:** Se você tem um hook git que gera commits, nunca use a presença do script em `--name-only` como guard de recursão. Use uma flag explícita na mensagem ou uma variável de ambiente exportada pelo processo pai.

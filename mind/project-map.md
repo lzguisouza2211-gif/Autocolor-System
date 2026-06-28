@@ -1,35 +1,41 @@
 # AutoColor System — Mapa do Projeto
 
-## Visão Geral
-
-Sistema de Ponto de Venda (PDV) para autopeças/tintas (AutoColor). Interface web React com back-end Supabase, suporte a impressão térmica local e geração de relatórios PDF.
+> Última atualização: 28/06/2026
 
 ---
 
-## Front-end
+## Visão Geral
 
-### Páginas / Rotas
+Sistema de PDV (Ponto de Venda) para a empresa AutoColor. Aplicação web React com back-end Supabase, voltada para gestão de vendas, clientes, produtos e controle financeiro.
 
-- `/login` — autenticação
-- `/` — Dashboard com métricas
-- `/pdv` — Ponto de Venda
-- `/products` — Gestão de produtos
-- `/clients` — Gestão de clientes
-- `/sales-history` — Histórico de vendas
-- `/financial` — Módulo financeiro mensal
+---
 
-### Componentes Principais
+## Estrutura de Diretórios
 
-- `PDV.tsx` — carrinho, leitor de código de barras, seleção de cliente, finalização de venda
-- `ProductsTable.tsx` — listagem e CRUD de produtos
-- `ProductForm.tsx` — formulário de produto
-- `SalesHistory.tsx` — histórico com impressão por venda individual
-- `Header.tsx` + `Sidebar.tsx` + `MobileMenu.tsx` — layout
+```
+src/
+├── components/        # Componentes principais da UI
+│   ├── PDV.tsx        # Tela de ponto de venda
+│   ├── ProductForm.tsx
+│   ├── ProductsTable.tsx
+│   ├── SalesHistory.tsx
+│   ├── Header.tsx
+│   └── ...
+├── contexts/
+│   └── ProductsContext.tsx  # Estado global de produtos
+├── AppRoutes.tsx      # Definição de rotas
+└── ...
 
-### Contextos
-
-- `AuthContext.tsx` — autenticação de usuário
-- `ProductsContext.tsx` — estado global de produtos
+mind/                  # Sistema AutoDocs
+├── generate-docs.py   # Script principal (Python 3)
+├── post-commit.sh     # Hook git versionado (backup)
+├── setup-autodocs.sh  # Script de instalação do hook
+├── CHANGELOG.md       # Histórico técnico por commit
+├── learning-log.md    # Aprendizados genuínos
+├── architecture.md    # Decisões arquiteturais
+├── linkedin-ideas.md  # Rascunhos de posts
+└── project-map.md     # Este arquivo — mapa do projeto
+```
 
 ---
 
@@ -69,6 +75,8 @@ Pipeline de documentação automática ativado por hook `post-commit` do git.
 ```
 mind/
 ├── generate-docs.py   # Script principal (Python 3)
+├── post-commit.sh     # Cópia versionada do hook git
+├── setup-autodocs.sh  # Reinstala o hook ao clonar o repo
 ├── CHANGELOG.md       # Histórico técnico por commit
 ├── learning-log.md    # Aprendizados genuínos
 ├── architecture.md    # Decisões arquiteturais
@@ -80,18 +88,26 @@ mind/
 
 ```
 git commit
-  → hook post-commit
+  → hook post-commit (.git/hooks/post-commit)
+  → guard: lê mensagem do commit (git log -1 --format=%s)
+      → se contém [skip ci] ou auto-update documentation → aborta (evita loop)
   → generate-docs.py
   → claude CLI via subprocess (JSON estruturado)
   → atualização seletiva dos 5 arquivos em mind/
+  → git commit automático com [skip ci]
 ```
 
-### Configuração
+### Configuração e Instalação
 
 - **Sem `ANTHROPIC_API_KEY`** — autenticação delegada ao Claude Code (CLI)
 - `claude` CLI deve estar instalado e autenticado na máquina
 - `find_claude()` busca o binário via `shutil.which()` e em candidatos fixos (NVM, `~/.local/bin`, `/usr/local/bin`)
 - Falha silenciosa: sem o CLI, o commit prossegue normalmente
+- **Ao clonar o repositório:** executar `bash mind/setup-autodocs.sh` para reinstalar o hook em `.git/hooks/post-commit`
+
+### Guard de Recursão
+
+O hook verifica a **mensagem do commit atual** (não a lista de arquivos) para detectar se está em um ciclo recursivo. Commits automáticos do AutoDocs incluem `[skip ci]` ou `auto-update documentation` na mensagem, o que dispara o guard e interrompe a execução.
 
 ---
 
@@ -115,6 +131,8 @@ git commit
 - [x] Controle de vendas a prazo
 - [x] Layout responsivo com menu mobile
 - [x] Documentação automática via AutoDocs (hook post-commit + Claude CLI)
+- [x] Guard de recursão via mensagem do commit (fix: evita autobloqueio do hook)
+- [x] Script de setup `mind/setup-autodocs.sh` para reinstalação do hook após clone
 
 ---
 

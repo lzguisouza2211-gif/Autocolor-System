@@ -49,3 +49,18 @@ Registro cronológico de todas as implementações, correções e melhorias do p
 - `mind/learning-log.md` — aprendizados registrados
 - `mind/linkedin-ideas.md` — rascunho de post gerado
 - `mind/project-map.md` — mapa do projeto atualizado
+
+
+
+## 28/06/2026
+
+**Commit:** fix: corrige guard de recursão e adiciona setup do AutoDocs
+
+**Implementações:**
+- Corrigido bug onde o hook `post-commit` se autobloqueava: o guard de recursão detectava `mind/generate-docs.py` na lista de arquivos alterados e cancelava sua própria execução. Solução: guard passou a inspecionar a **mensagem do commit** (procurando por `[skip ci]` ou `auto-update documentation`) em vez de verificar arquivos
+- Adicionado `mind/post-commit.sh` como cópia versionada do hook git, garantindo que o script não se perca ao clonar o repositório
+- Adicionado `mind/setup-autodocs.sh` com script de instalação automática do hook: copia `post-commit.sh` para `.git/hooks/post-commit` e define permissão de execução
+
+**Arquivos:**
+- `mind/post-commit.sh` — backup versionado do hook git
+- `mind/setup-autodocs.sh` — script de setup para reinstalação do hook

@@ -74,3 +74,17 @@ git commit → post-commit hook → generate-docs.py
 - Nova dependência implícita de ambiente: `claude` CLI instalado e autenticado
 - Constante `AUTODOCS_MODEL` removida — modelo padrão do CLI é utilizado
 - `find_claude()` necessário para resolver PATH restrito no contexto de hooks git
+
+
+
+## Guard de Recursão via Mensagem do Commit — 28/06/2026
+
+**Contexto:** O hook `post-commit` do AutoDocs invoca `generate-docs.py`, que por sua vez faz um `git commit` para persistir os arquivos de documentação gerados. Isso criaria um loop infinito.
+
+**Decisão:** O guard de recursão verifica a **mensagem do commit atual** (`git log -1 --format=%s`) em busca de marcadores como `[skip ci]` ou `auto-update documentation`, e aborta o hook se encontrar.
+
+**Alternativas descartadas:**
+- Verificar arquivos modificados: quebra quando o script de geração está no próprio repositório (colisão com `mind/generate-docs.py`)
+- Variável de ambiente: funciona, mas requer que o script filho a exporte corretamente; menos legível
+
+**Trade-off:** A mensagem do commit é um contrato implícito — se outro commit legítimo contiver as palavras-chave de guard por coincidência, o AutoDocs será silenciado. Aceitável dado o contexto de uso interno.
