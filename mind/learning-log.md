@@ -45,3 +45,12 @@ Registro de aprendizados técnicos adquiridos durante o desenvolvimento.
 - **Queries paralelas com `Promise.all` no SalesHistory:** Substituir N queries sequenciais por 3 paralelas (`users`, `customers`, vendas com itens) reduz o tempo de carregamento do histórico de O(N) para O(1) em relação ao número de vendas — independente do tamanho do histórico.
 
 - **Derivar dados do contexto em vez de duplicá-los:** `lowStockProducts`, `categories` e `brands` não precisam de estado próprio em cada componente — são derivações da lista de produtos já carregada no contexto. Menos estado = menos bugs de sincronização.
+
+
+
+## 28/06/2026
+
+**Aprendizados:**
+- Artefatos gerados automaticamente (documentação, logs, relatórios) raramente devem ser versionados junto com o código-fonte — eles poluem o histórico, dificultam code review e criam ruído nos diffs
+- O AutoDocs foi projetado para gerar commits automáticos, o que criava um ciclo de ruído no `git log`: commits reais se misturavam com commits de documentação. Gitignoring o diretório de saída resolve o problema na raiz, sem precisar de guards complexos
+- A decisão de gitignore não invalida o sistema — ele continua funcionando localmente. A documentação é útil para quem desenvolve, não precisa estar no repositório central

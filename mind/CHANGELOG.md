@@ -89,3 +89,17 @@ Registro cronológico de todas as implementações, correções e melhorias do p
 - `src/components/ProductsTable.tsx`
 - `src/components/SalesHistory.tsx`
 - `src/contexts/ProductsContext.tsx` *(novo)*
+
+
+
+## 28/06/2026
+
+**Commit:** feat/ retirando mind do git
+
+**Implementações:**
+- Diretório `mind/` adicionado ao `.gitignore`, removendo os arquivos de documentação automática do rastreamento do repositório
+- A documentação gerada pelo AutoDocs passa a existir apenas localmente em cada máquina, sem ser versionada
+- O repositório fica mais limpo, sem commits automáticos de documentação poluindo o histórico
+
+**Arquivos:**
+- `.gitignore`

@@ -2,109 +2,15 @@
 
 ## Visão Geral
 
-Sistema de PDV (Ponto de Venda) desenvolvido em React + TypeScript com backend Supabase. Voltado para uma loja de tintas automotivas (AutoColor), com funcionalidades de vendas, gestão de produtos, clientes, financeiro e relatórios.
+Sistema PDV (Ponto de Venda) web desenvolvido em React + Supabase, voltado para o segmento de tintas automotivas. Inclui gestão de vendas, clientes, produtos, financeiro mensal e impressão de recibos.
 
 ---
 
-## Stack Técnica
+## Funcionalidades Implementadas
 
-| Camada | Tecnologia |
-|---|---|
-| Frontend | React 18 + TypeScript + Vite |
-| Estilização | Tailwind CSS |
-| Backend / DB | Supabase (PostgreSQL + Auth + Realtime) |
-| Ícones | Iconify + React Icons |
-| Roteamento | React Router DOM v6 |
-| PDF | jsPDF + jsPDF-AutoTable |
-| Código de barras | @zxing/library |
-| Impressão | Servidor local via fetch |
-
----
-
-## Estrutura de Arquivos
-
-```
-src/
-├── contexts/
-│   ├── AuthContext.tsx         # Autenticação Supabase
-│   └── ProductsContext.tsx     # Cache global de produtos (realtime)
-├── components/
-│   ├── Login.tsx
-│   ├── Header.tsx              # Alertas de estoque (via ProductsContext)
-│   ├── MobileMenu.tsx
-│   ├── Dashboard.tsx
-│   ├── PDV.tsx                 # Ponto de venda (via ProductsContext)
-│   ├── ProductsTable.tsx       # CRUD de produtos (via ProductsContext)
-│   ├── ProductForm.tsx         # Formulário de produto (via ProductsContext)
-│   ├── SalesHistory.tsx        # Histórico + edição de vendas
-│   ├── Customers.tsx           # Gestão de clientes
-│   ├── Financial.tsx           # Módulo financeiro mensal
-│   ├── CreditSales.tsx         # Vendas a prazo
-│   ├── BarcodeScanner.tsx      # Leitor de código de barras
-│   └── Reports.tsx             # Relatórios PDF por cliente
-├── AppRoutes.tsx               # Roteamento + providers (Auth > Products > Router)
-├── supabase.ts                 # Cliente Supabase
-└── main.tsx
-
-mind/                           # Sistema AutoDocs
-├── generate-docs.py            # Script chamado pelo hook git
-├── setup-autodocs.sh           # Reinstala o hook ao clonar o repo
-├── CHANGELOG.md                # Histórico técnico por commit
-├── learning-log.md             # Aprendizados genuínos
-├── architecture.md             # Decisões arquiteturais
-├── linkedin-ideas.md           # Rascunhos de posts
-└── project-map.md              # Este arquivo — mapa do projeto
-```
-
----
-
-## Arquitetura de Dados
-
-### Contextos
-
-#### AuthContext
-- Gerencia sessão do usuário via Supabase Auth
-- Expõe: `user`, `loading`
-- Instanciado na raiz da aplicação
-
-#### ProductsContext *(adicionado em 28/06/2026)*
-- Cache global da tabela `products` com subscription realtime
-- Uma única query ao Supabase, compartilhada por todos os componentes
-- Expõe:
-  - `products[]` — lista completa de produtos ativos
-  - `lowStockProducts[]` — produtos com estoque ≤ threshold (derivado)
-  - `categories[]` — categorias únicas (derivado)
-  - `brands[]` — marcas únicas (derivado)
-  - `loading` — estado de carregamento
-  - `refetch()` — força re-busca manual
-- Hierarquia: `AuthProvider > ProductsProvider > BrowserRouter`
-
-### Regra arquitetural
-Todo componente que precisar de dados da tabela `products` deve consumir `useProducts()`. Queries diretas ao Supabase para a tabela `products` fora do contexto são consideradas um smell arquitetural.
-
----
-
-## Fluxo Principal
-
-```
-Login → Dashboard → PDV → [Seleciona Produtos] → [Seleciona Cliente] → Finaliza Venda → Imprime Recibo
-                        ↓
-              Histórico de Vendas → Imprime por Venda / Edita Venda
-```
-
----
-
-## Funcionalidades
-
-### Implementadas
-
-- [x] Login com autenticação Supabase
-- [x] PDV com carrinho de compras
-- [x] Seleção de cliente no PDV
-- [x] Leitor de código de barras
-- [x] Histórico de vendas com edição
-- [x] Impressão de recibo via servidor local
-- [x] Notificação de impressão enviada
+- [x] Autenticação de usuários
+- [x] Módulo de vendas (PDV)
+- [x] Impressão de recibo via integração com impressora (solicitação de impressão enviada)
 - [x] Impressão por venda individual (vendas a prazo)
 - [x] Gestão de produtos (CRUD)
 - [x] Gestão de clientes
@@ -113,11 +19,12 @@ Login → Dashboard → PDV → [Seleciona Produtos] → [Seleciona Cliente] →
 - [x] Dashboard com métricas
 - [x] Controle de vendas a prazo
 - [x] Layout responsivo com menu mobile
-- [x] Documentação automática via AutoDocs (hook post-commit + Claude CLI)
+- [x] Documentação automática via AutoDocs (hook post-commit + Claude CLI) — saída local, não versionada
 - [x] Guard de recursão via mensagem do commit
 - [x] Script de setup `mind/setup-autodocs.sh` para reinstalação do hook após clone
 - [x] Cache global de produtos via ProductsContext (elimina N+1 entre componentes)
 - [x] Queries paralelas no histórico de vendas (3 queries fixas vs. N+1 por venda)
+- [x] Diretório `mind/` excluído do git (documentação AutoDocs é local, não versionada)
 
 ---
 
@@ -133,7 +40,7 @@ git commit
   → generate-docs.py
   → claude CLI via subprocess (JSON estruturado)
   → atualização seletiva dos 5 arquivos em mind/
-  → git commit automático com [skip ci]
+  → arquivos gravados apenas localmente (mind/ está no .gitignore)
 ```
 
 ### Configuração e Instalação
@@ -143,6 +50,7 @@ git commit
 - `find_claude()` busca o binário via `shutil.which()` e em candidatos fixos (NVM, `~/.local/bin`, `/usr/local/bin`)
 - Falha silenciosa: sem o CLI, o commit prossegue normalmente
 - **Ao clonar o repositório:** executar `bash mind/setup-autodocs.sh` para reinstalar o hook
+- **Saída local:** o diretório `mind/` está no `.gitignore` — a documentação existe apenas na máquina local
 
 ### Guard de Recursão
 
@@ -172,3 +80,11 @@ O hook verifica a **mensagem do commit atual** para detectar ciclos. Commits aut
 ### Depois
 - 1 query global de produtos no boot, compartilhada via Context + Realtime
 - SalesHistory: 3 queries paralelas fixas, independente do volume de vendas
+
+---
+
+## Decisões Arquiteturais Relevantes
+
+- **AutoDocs com saída local:** documentação gerada pelo AutoDocs não é versionada no git (`mind/` no `.gitignore`). Mantém o histórico limpo; adequado para projeto solo.
+- **ProductsContext global:** cache centralizado de produtos com Supabase Realtime elimina N+1 entre componentes.
+- **Guard de recursão por mensagem:** solução simples e robusta para evitar loops no hook post-commit.

@@ -118,3 +118,15 @@ ProductsContext
 - Prop drilling: inviável — os consumidores estão em níveis distintos da árvore
 
 **Consequências:** Qualquer novo componente que precise de dados de produtos deve consumir `useProducts()` em vez de fazer query direta ao Supabase. Queries diretas à tabela `products` fora do contexto são consideradas um smell arquitetural a partir deste commit.
+
+
+
+## 28/06/2026 — AutoDocs: Saída local, não versionada
+
+**Decisão:** O diretório `mind/` (saída do AutoDocs) foi adicionado ao `.gitignore`.
+
+**Motivação:** O AutoDocs gerava commits automáticos de documentação que poluíam o histórico git e tornavam o `git log` difícil de ler. Apesar do guard de recursão funcionar corretamente, a presença de commits `[skip ci]` no histórico central era indesejada.
+
+**Consequência:** A documentação gerada (changelog, learnings, architecture, linkedin, project_map) existe apenas na máquina local do desenvolvedor. Não é compartilhada via repositório.
+
+**Trade-off aceito:** Cada desenvolvedor tem sua própria cópia local da documentação, sem sincronização entre máquinas. Para um projeto solo isso é aceitável; em times maiores exigiria uma solução de armazenamento externo (ex: wiki, Notion, S3).
