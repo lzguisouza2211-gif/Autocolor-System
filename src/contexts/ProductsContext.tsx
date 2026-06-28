@@ -13,6 +13,8 @@ export type Product = {
   stock: number;
   deleted_at?: string | null;
   is_customizable?: boolean;
+  type?: string;
+  color?: string;
 };
 
 interface ProductsContextType {

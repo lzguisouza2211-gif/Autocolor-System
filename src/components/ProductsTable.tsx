@@ -166,7 +166,7 @@ const ProductsTable: React.FC = () => {
                       R$ {typeof product.price === 'number' ? product.price.toFixed(2) : (Number(product.price) ? Number(product.price).toFixed(2) : '0.00')}
                     </td>
                     <td className="px-3 sm:px-4 py-3 sm:py-4 text-right font-medium text-slate-900 text-xs sm:text-sm">
-                      R$ {typeof product.price_sale === 'number' ? product.price_sale.toFixed(2) : (typeof product.venda === 'number' ? product.venda.toFixed(2) : (Number(product.price_sale) ? Number(product.price_sale).toFixed(2) : '0.00'))}
+                      R$ {typeof product.price_sale === 'number' ? product.price_sale.toFixed(2) : (Number(product.price_sale) ? Number(product.price_sale).toFixed(2) : '0.00')}
                     </td>
                     <td className="px-3 sm:px-4 py-3 sm:py-4 text-center">
                       <div className="flex items-center justify-center gap-2">
@@ -246,7 +246,7 @@ const ProductsTable: React.FC = () => {
                     <div>
                       <div className="text-xs text-gray-500 mb-1">Preço Venda</div>
                       <div className="text-sm font-bold text-slate-900">
-                        R$ {typeof product.price_sale === 'number' ? product.price_sale.toFixed(2) : (typeof product.venda === 'number' ? product.venda.toFixed(2) : (Number(product.price_sale) ? Number(product.price_sale).toFixed(2) : '0.00'))}
+                        R$ {typeof product.price_sale === 'number' ? product.price_sale.toFixed(2) : (Number(product.price_sale) ? Number(product.price_sale).toFixed(2) : '0.00')}
                       </div>
                     </div>
                   </div>
