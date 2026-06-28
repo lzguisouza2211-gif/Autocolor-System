@@ -1112,8 +1112,9 @@ const PDV: React.FC = () => {
                         </div>
                       </div>
                       {/* Layout Mobile */}
-                      <div className={`lg:hidden space-y-3 ${selectedCartIndex === idx ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}> 
-                        <div className="flex items-start justify-between gap-2">
+                      <div className={`lg:hidden py-1 ${selectedCartIndex === idx ? 'ring-2 ring-blue-400 bg-blue-50 rounded-lg' : ''}`}>
+                        {/* Nome + botão remover */}
+                        <div className="flex items-start justify-between gap-2 mb-3">
                           <div className="flex-1 min-w-0">
                             {item.is_customizable ? (
                               <input
@@ -1126,8 +1127,11 @@ const PDV: React.FC = () => {
                               />
                             ) : (
                               <>
-                                <div className="font-semibold text-base break-words">{item.name}</div>
-                                <div className="text-xs text-gray-500 flex flex-wrap gap-1">
+                                <div className="font-semibold text-[15px] leading-snug break-words">
+                                  {item.name}
+                                  {lowStock && <span className="ml-2 text-xs text-yellow-700 font-bold">Estoque baixo</span>}
+                                </div>
+                                <div className="text-xs text-gray-400 flex flex-wrap gap-1 mt-0.5">
                                   {item.category && <span>{item.category}</span>}
                                   {item.mark && <span>• {item.mark}</span>}
                                   {item.type && <span>• {item.type}</span>}
@@ -1137,62 +1141,67 @@ const PDV: React.FC = () => {
                             )}
                           </div>
                           <button
-                            className="p-2 rounded-full hover:bg-red-100 text-red-500 flex-shrink-0"
+                            className="flex-shrink-0 w-11 h-11 rounded-full flex items-center justify-center text-red-500 hover:bg-red-50 active:bg-red-100 transition"
                             onClick={() => removeItem(item.product_id)}
                             disabled={finalizing}
                             title="Remover"
                           >
-                            <FiTrash2 size={18} />
+                            <FiTrash2 size={20} />
                           </button>
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <div className="text-xs text-gray-500 mb-1">Quantidade</div>
-                            <div className="flex items-center gap-1 bg-gray-50 rounded-md px-1 py-0.5 border border-gray-200 w-fit">
+                        {/* Controles: quantidade + preço unitário + total */}
+                        <div className="flex items-end gap-2">
+                          {/* Quantidade */}
+                          <div className="flex-shrink-0">
+                            <div className="text-[11px] text-gray-500 mb-1">Quantidade</div>
+                            <div className="flex items-center rounded-xl border border-gray-300 overflow-hidden">
                               <button
-                                className="w-8 h-8 rounded-md bg-white border text-sm font-semibold flex items-center justify-center"
+                                className="w-11 h-11 flex items-center justify-center text-xl font-bold text-slate-700 bg-gray-50 active:bg-gray-200 disabled:opacity-40 transition"
                                 onClick={() => changeQuantity(idx, -1)}
                                 disabled={item.quantity <= 1 || finalizing}
-                              >-</button>
-                              <span className="w-8 text-center text-sm font-semibold text-slate-700">{item.quantity}</span>
+                              >−</button>
+                              <span className="w-9 text-center text-sm font-bold text-slate-800 select-none">{item.quantity}</span>
                               <button
-                                className="w-8 h-8 rounded-md bg-white border text-sm font-semibold flex items-center justify-center"
+                                className="w-11 h-11 flex items-center justify-center text-xl font-bold text-slate-700 bg-gray-50 active:bg-gray-200 disabled:opacity-40 transition"
                                 onClick={() => changeQuantity(idx, 1)}
                                 disabled={item.quantity >= item.stock || finalizing}
                               >+</button>
                             </div>
                           </div>
-                          <div>
-                            <div className="text-xs text-gray-500 mb-1">Unitário</div>
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={item.price_sale || ''}
-                              onChange={(e) => {
-                                if (e.target.value === '') {
-                                  updateUnitPrice(item.product_id, 0);
-                                } else {
-                                  updateUnitPrice(item.product_id, Number(e.target.value));
-                                }
-                              }}
-                              disabled={finalizing}
-                              className="w-full text-left text-sm font-medium text-slate-900 border border-gray-200 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-200"
-                            />
+                          {/* Preço unitário */}
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[11px] text-gray-500 mb-1">Unitário</div>
+                            <div className="relative">
+                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">R$</span>
+                              <input
+                                type="number"
+                                inputMode="decimal"
+                                min="0"
+                                step="0.01"
+                                value={item.price_sale || ''}
+                                onChange={(e) => updateUnitPrice(idx, e.target.value === '' ? 0 : Number(e.target.value))}
+                                disabled={finalizing}
+                                className="w-full pl-7 pr-2 py-2.5 text-sm font-medium border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-300 hide-spin"
+                              />
+                            </div>
                           </div>
-                        </div>
-                        <div>
-                          <div className="text-xs text-gray-500 mb-1">Total</div>
-                          <input
-                            type="text"
-                            value={`R$ ${formatCurrency(item.subtotal)}`}
-                            onChange={(e) => {
-                              const numValue = parseFloat(e.target.value.replace(/[^0-9.]/g, ''));
-                              if (!isNaN(numValue)) updateTotalPrice(item.product_id, numValue);
-                            }}
-                            disabled={finalizing}
-                            className="w-full text-left text-base font-bold text-slate-900 border border-gray-200 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-200"
-                          />
+                          {/* Total */}
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[11px] text-gray-500 mb-1">Total</div>
+                            <div className="relative">
+                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">R$</span>
+                              <input
+                                type="number"
+                                inputMode="decimal"
+                                min="0"
+                                step="0.01"
+                                value={item.subtotal || ''}
+                                onChange={(e) => updateTotalPrice(idx, e.target.value === '' ? 0 : Number(e.target.value))}
+                                disabled={finalizing}
+                                className="w-full pl-7 pr-2 py-2.5 text-sm font-bold border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-300 hide-spin bg-slate-50"
+                              />
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </li>
