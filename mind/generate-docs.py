@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-AutoDocs — Gerador automático de documentação via Claude AI.
+AutoDocs — Gerador automático de documentação via Claude Code CLI.
 Executado pelo hook post-commit do git.
 """
 
@@ -8,6 +8,7 @@ import subprocess
 import json
 import os
 import sys
+import shutil
 from datetime import datetime
 from pathlib import Path
 
@@ -15,20 +16,18 @@ from pathlib import Path
 # Configuração
 # ---------------------------------------------------------------------------
 
-MODEL = os.environ.get("AUTODOCS_MODEL", "claude-haiku-4-5-20251001")
-MAX_DIFF_CHARS = 12000  # Limita tamanho do diff para controlar custo de tokens
+MAX_DIFF_CHARS = 12000
 
 MIND_DIR = Path(__file__).parent
 PROJECT_ROOT = MIND_DIR.parent
 
 FILES = {
-    "changelog":   MIND_DIR / "CHANGELOG.md",
-    "learning":    MIND_DIR / "learning-log.md",
+    "changelog":    MIND_DIR / "CHANGELOG.md",
+    "learning":     MIND_DIR / "learning-log.md",
     "architecture": MIND_DIR / "architecture.md",
-    "linkedin":    MIND_DIR / "linkedin-ideas.md",
-    "map":         MIND_DIR / "project-map.md",
+    "linkedin":     MIND_DIR / "linkedin-ideas.md",
+    "map":          MIND_DIR / "project-map.md",
 }
-
 
 # ---------------------------------------------------------------------------
 # Helpers git
@@ -72,7 +71,6 @@ def get_git_info() -> dict:
         "diff": diff,
     }
 
-
 # ---------------------------------------------------------------------------
 # Helpers de arquivo
 # ---------------------------------------------------------------------------
@@ -89,9 +87,10 @@ def read_tail(path: Path, max_chars: int = 2500) -> str:
 def append_to_file(path: Path, new_content: str) -> None:
     existing = path.read_text(encoding="utf-8") if path.exists() else ""
     sep = "\n\n" if existing.strip() else ""
-    path.write_text(existing.rstrip() + sep + "\n\n" + new_content.strip() + "\n",
-                    encoding="utf-8")
-
+    path.write_text(
+        existing.rstrip() + sep + "\n\n" + new_content.strip() + "\n",
+        encoding="utf-8",
+    )
 
 # ---------------------------------------------------------------------------
 # Prompt
@@ -141,30 +140,58 @@ Retorne APENAS um objeto JSON válido (sem texto antes ou depois, sem markdown),
 **Regras obrigatórias:**
 - Todo conteúdo em português do Brasil
 - `changelog_entry`: descreva concretamente o que foi implementado com base no diff, não apenas repita a mensagem do commit
-- `learning_entry`: apenas aprendizados genuínos e não óbvios. Se não houver nada novo para aprender, use `should_update_learning: false`
-- `architecture_entry`: só preencha se houver uma decisão arquitetural real (nova biblioteca significativa, mudança de padrão, decisão de design). Caso contrário, `should_update_architecture: false`
+- `learning_entry`: apenas aprendizados genuínos e não óbvios. Se não houver nada novo, use `should_update_learning: false`
+- `architecture_entry`: só preencha se houver uma decisão arquitetural real. Caso contrário, `should_update_architecture: false`
 - `linkedin_entry`: texto natural e educativo, sem marketing. Mostre o problema real e como foi resolvido
-- `project_map`: retorne o mapa COMPLETO e atualizado do projeto, incorporando as novas funcionalidades encontradas no diff. Mantenha o formato Markdown com seções organizadas
-- Seja conciso mas informativo. Evite texto desnecessário
+- `project_map`: retorne o mapa COMPLETO e atualizado, incorporando as novas funcionalidades. Mantenha o formato Markdown com seções organizadas
+- Seja conciso mas informativo
 """
 
+# ---------------------------------------------------------------------------
+# Chama o Claude CLI
+# ---------------------------------------------------------------------------
+
+def find_claude() -> str | None:
+    # Tenta no PATH normal
+    path = shutil.which("claude")
+    if path:
+        return path
+    # Locais comuns quando o PATH do hook é restrito
+    candidates = [
+        os.path.expanduser("~/.nvm/versions/node/v20.20.0/bin/claude"),
+        os.path.expanduser("~/.local/bin/claude"),
+        "/usr/local/bin/claude",
+    ]
+    for c in candidates:
+        if os.path.isfile(c) and os.access(c, os.X_OK):
+            return c
+    return None
+
+
+def call_claude(prompt: str) -> str:
+    claude_bin = find_claude()
+    if not claude_bin:
+        print("[AutoDocs] claude CLI não encontrado — pulando documentação.")
+        sys.exit(0)
+
+    result = subprocess.run(
+        [claude_bin, "-p", prompt, "--output-format", "text"],
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+
+    if result.returncode != 0:
+        print(f"[AutoDocs] Erro no claude CLI: {result.stderr[:200]}")
+        sys.exit(0)
+
+    return result.stdout.strip()
 
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
 def main() -> None:
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        print("[AutoDocs] ANTHROPIC_API_KEY não configurada — pulando documentação.")
-        sys.exit(0)
-
-    try:
-        import anthropic
-    except ImportError:
-        print("[AutoDocs] Pacote 'anthropic' não instalado. Execute: pip install anthropic")
-        sys.exit(0)
-
     git_info = get_git_info()
     if not git_info["message"]:
         print("[AutoDocs] Não foi possível ler o commit — pulando.")
@@ -175,17 +202,7 @@ def main() -> None:
     current_map = read_tail(FILES["map"])
     prompt = build_prompt(git_info, current_map)
 
-    try:
-        client = anthropic.Anthropic(api_key=api_key)
-        response = client.messages.create(
-            model=MODEL,
-            max_tokens=2500,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        raw = response.content[0].text.strip()
-    except Exception as exc:
-        print(f"[AutoDocs] Erro na API: {exc}")
-        sys.exit(0)
+    raw = call_claude(prompt)
 
     # Remove bloco markdown caso o modelo insista em colocar
     if raw.startswith("```"):

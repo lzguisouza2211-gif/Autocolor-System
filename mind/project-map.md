@@ -1,20 +1,16 @@
 # AutoColor System — Mapa do Projeto
 
-Visão geral atualizada do estado atual do projeto.
+## Visão Geral
 
----
-
-## Descrição
-
-Sistema de PDV (Ponto de Venda) desenvolvido para controle de caixa, estoque, clientes e relatórios financeiros. Voltado para pequenos comércios.
+Sistema de Ponto de Venda (PDV) desenvolvido em React + TypeScript para a AutoColor. Gerencia vendas, produtos, clientes, financeiro e emissão de recibos térmicos.
 
 ---
 
 ## Front-end
 
-### Módulos
+### Páginas / Módulos
 
-- **PDV (Ponto de Venda)** — carrinho de compras, seleção de cliente, finalização de venda, leitor de código de barras
+- **PDV** — carrinho de compras, seleção de cliente, leitor de código de barras
 - **Histórico de Vendas** — listagem de vendas realizadas, impressão por venda, filtros
 - **Produtos** — tabela de produtos, formulário de cadastro/edição
 - **Clientes** — cadastro de clientes, relatório PDF por cliente, vendas a prazo
@@ -52,7 +48,7 @@ Sistema de PDV (Ponto de Venda) desenvolvido para controle de caixa, estoque, cl
 ## Tecnologias
 
 | Categoria | Tecnologia |
-|-----------|-----------|
+|-----------|------------|
 | Framework | React 19 |
 | Linguagem | TypeScript |
 | Estilo | Tailwind CSS |
@@ -65,6 +61,40 @@ Sistema de PDV (Ponto de Venda) desenvolvido para controle de caixa, estoque, cl
 | Código de barras | QuaggaJS + ZXing |
 | Ícones | Iconify + React Icons |
 | Deploy | Vercel |
+
+---
+
+## Sistema AutoDocs
+
+Pipeline de documentação automática ativado por hook `post-commit` do git.
+
+### Estrutura
+
+```
+mind/
+├── generate-docs.py   # Script principal (Python 3)
+├── CHANGELOG.md       # Histórico técnico por commit
+├── learning-log.md    # Aprendizados genuínos
+├── architecture.md    # Decisões arquiteturais
+├── linkedin-ideas.md  # Rascunhos de posts
+└── project-map.md     # Este arquivo — mapa do projeto
+```
+
+### Fluxo
+
+```
+git commit
+  → hook post-commit
+  → generate-docs.py
+  → Claude Haiku API (JSON estruturado)
+  → atualização seletiva dos 5 arquivos em mind/
+```
+
+### Configuração
+
+- `ANTHROPIC_API_KEY` — obrigatória para ativar o AutoDocs
+- `AUTODOCS_MODEL` — modelo Claude (padrão: `claude-haiku-4-5-20251001`)
+- Falha silenciosa: sem a chave, o commit prossegue normalmente
 
 ---
 
@@ -87,6 +117,7 @@ Sistema de PDV (Ponto de Venda) desenvolvido para controle de caixa, estoque, cl
 - [x] Dashboard com métricas
 - [x] Controle de vendas a prazo
 - [x] Layout responsivo com menu mobile
+- [x] Documentação automática via AutoDocs (hook post-commit + Claude AI)
 
 ---
 

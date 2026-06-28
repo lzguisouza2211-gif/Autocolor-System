@@ -31,3 +31,32 @@ Registro de decisões arquiteturais importantes tomadas durante o desenvolviment
 **Impacto:** Sistema de dois processos — Vite dev server + print-server rodando em paralelo.
 
 ---
+
+
+
+## AutoDocs — Pipeline de Documentação Automática (28/06/2026)
+
+**Decisão:** Adotar um hook `post-commit` do git que invoca `mind/generate-docs.py` após cada commit para manter a documentação do projeto sincronizada com o código sem esforço manual.
+
+**Modelo escolhido:** Claude Haiku (`claude-haiku-4-5-20251001`) via variável de ambiente `AUTODOCS_MODEL`. Haiku foi preferido por custo/velocidade — documentação não exige raciocínio profundo.
+
+**Fluxo:**
+```
+git commit → post-commit hook → generate-docs.py
+  → coleta git info (hash, mensagem, diff truncado em 12k chars)
+  → lê tail do project-map.md (contexto)
+  → envia prompt ao Claude
+  → recebe JSON estruturado
+  → atualiza seletivamente os 5 arquivos em mind/
+```
+
+**Arquivos gerenciados automaticamente:**
+| Arquivo | Propósito |
+|---|---|
+| `CHANGELOG.md` | Histórico técnico por commit |
+| `learning-log.md` | Aprendizados genuínos e não óbvios |
+| `architecture.md` | Decisões arquiteturais relevantes |
+| `linkedin-ideas.md` | Rascunhos de posts educativos |
+| `project-map.md` | Mapa completo e atualizado do projeto |
+
+**Segurança:** Script aborta silenciosamente se `ANTHROPIC_API_KEY` não estiver configurada, não bloqueando o fluxo normal de commits.
