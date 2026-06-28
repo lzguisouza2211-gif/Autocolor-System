@@ -27,3 +27,25 @@ Registro cronológico de todas as implementações, correções e melhorias do p
 - `.env` (removido do git)
 - `.env.example` (novo)
 - `.gitignore` (atualizado)
+
+
+
+## 28/06/2026
+
+**Commit:** fix: migra AutoDocs do SDK Python para o claude CLI (sem API key separada)
+
+**Implementações:**
+- Substituição do SDK `anthropic` (Python) pelo binário `claude` CLI invocado via `subprocess.run`
+- Função `find_claude()` implementada para localizar o binário em múltiplos caminhos: `shutil.which()`, NVM (`~/.nvm/versions/node/v20.20.0/bin/claude`), `~/.local/bin` e `/usr/local/bin`
+- Função `call_claude()` encapsula a chamada ao CLI com flags `-p` e `--output-format text`, com timeout de 120 s
+- Eliminação da variável de ambiente `ANTHROPIC_API_KEY` e da constante `AUTODOCS_MODEL` — autenticação delegada ao Claude Code
+- Remoção da dependência pip `anthropic`; adição de `shutil` (stdlib)
+- Ajustes de estilo: alinhamento do dicionário `FILES`, reformatação de `append_to_file`, remoção de linhas em branco redundantes
+
+**Arquivos:**
+- `mind/generate-docs.py` — lógica principal refatorada
+- `mind/CHANGELOG.md` — atualizado pelo próprio sistema
+- `mind/architecture.md` — decisão arquitetural registrada
+- `mind/learning-log.md` — aprendizados registrados
+- `mind/linkedin-ideas.md` — rascunho de post gerado
+- `mind/project-map.md` — mapa do projeto atualizado

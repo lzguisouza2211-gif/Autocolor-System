@@ -2,32 +2,28 @@
 
 ## Visão Geral
 
-Sistema de Ponto de Venda (PDV) desenvolvido em React + TypeScript para a AutoColor. Gerencia vendas, produtos, clientes, financeiro e emissão de recibos térmicos.
+Sistema de Ponto de Venda (PDV) para autopeças/tintas (AutoColor). Interface web React com back-end Supabase, suporte a impressão térmica local e geração de relatórios PDF.
 
 ---
 
 ## Front-end
 
-### Páginas / Módulos
+### Páginas / Rotas
 
-- **PDV** — carrinho de compras, seleção de cliente, leitor de código de barras
-- **Histórico de Vendas** — listagem de vendas realizadas, impressão por venda, filtros
-- **Produtos** — tabela de produtos, formulário de cadastro/edição
-- **Clientes** — cadastro de clientes, relatório PDF por cliente, vendas a prazo
-- **Financeiro** — página financeira mensal, resumo de receitas
-- **Dashboard** — métricas e vendas recentes
-- **Vendas Marcadas** — controle de vendas a prazo
+- `/login` — autenticação
+- `/` — Dashboard com métricas
+- `/pdv` — Ponto de Venda
+- `/products` — Gestão de produtos
+- `/clients` — Gestão de clientes
+- `/sales-history` — Histórico de vendas
+- `/financial` — Módulo financeiro mensal
 
 ### Componentes Principais
 
-- `PDV.tsx` — ponto de venda com carrinho e seleção de clientes
-- `SalesHistory.tsx` — histórico com impressão por venda
-- `ProductsTable.tsx` + `ProductForm.tsx` — gestão de produtos
-- `Customers.tsx` — gestão de clientes com relatório PDF
-- `Financeiro.tsx` — módulo financeiro
-- `DashboardMetrics.tsx` + `RecentSalesTable.tsx` — dashboard
-- `MarkedSales.tsx` — vendas a prazo
-- `BarcodeScanner.tsx` — leitor de código de barras
+- `PDV.tsx` — carrinho, leitor de código de barras, seleção de cliente, finalização de venda
+- `ProductsTable.tsx` — listagem e CRUD de produtos
+- `ProductForm.tsx` — formulário de produto
+- `SalesHistory.tsx` — histórico com impressão por venda individual
 - `Header.tsx` + `Sidebar.tsx` + `MobileMenu.tsx` — layout
 
 ### Contextos
@@ -86,15 +82,16 @@ mind/
 git commit
   → hook post-commit
   → generate-docs.py
-  → Claude Haiku API (JSON estruturado)
+  → claude CLI via subprocess (JSON estruturado)
   → atualização seletiva dos 5 arquivos em mind/
 ```
 
 ### Configuração
 
-- `ANTHROPIC_API_KEY` — obrigatória para ativar o AutoDocs
-- `AUTODOCS_MODEL` — modelo Claude (padrão: `claude-haiku-4-5-20251001`)
-- Falha silenciosa: sem a chave, o commit prossegue normalmente
+- **Sem `ANTHROPIC_API_KEY`** — autenticação delegada ao Claude Code (CLI)
+- `claude` CLI deve estar instalado e autenticado na máquina
+- `find_claude()` busca o binário via `shutil.which()` e em candidatos fixos (NVM, `~/.local/bin`, `/usr/local/bin`)
+- Falha silenciosa: sem o CLI, o commit prossegue normalmente
 
 ---
 
@@ -117,7 +114,7 @@ git commit
 - [x] Dashboard com métricas
 - [x] Controle de vendas a prazo
 - [x] Layout responsivo com menu mobile
-- [x] Documentação automática via AutoDocs (hook post-commit + Claude AI)
+- [x] Documentação automática via AutoDocs (hook post-commit + Claude CLI)
 
 ---
 
