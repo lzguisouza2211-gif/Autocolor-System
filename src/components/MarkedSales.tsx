@@ -482,7 +482,7 @@ const MarkedSales: React.FC = () => {
   const selectedCustomer = groupedCustomers.find((customer) => customer.customerId === selectedCustomerId) ?? null;
 
   return (
-    <div className="h-full flex flex-col gap-6">
+    <div className="flex flex-col gap-6 lg:h-full">
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Vendas a Prazo</h1>
         <p className="text-sm text-slate-500 mt-1">
@@ -494,8 +494,8 @@ const MarkedSales: React.FC = () => {
         <div className="border border-red-200 bg-red-50 text-red-700 rounded-lg px-3 py-2 text-sm">{error}</div>
       )}
 
-      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-4">
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden lg:col-span-3 flex flex-col min-h-0">
+      <div className="grid grid-cols-1 lg:grid-cols-12 lg:flex-1 lg:min-h-0 gap-4">
+        <div className={`bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden lg:col-span-3 flex flex-col lg:max-h-none lg:min-h-0 ${selectedCustomerId ? 'hidden lg:flex' : ''}`}>
           <div className="px-4 py-3 border-b border-gray-100">
             <h2 className="text-sm font-semibold text-slate-900">Clientes com vendas a prazo</h2>
           </div>
@@ -539,8 +539,23 @@ const MarkedSales: React.FC = () => {
           )}
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 space-y-4 lg:col-span-9">
-          
+        <div className={`bg-white border border-gray-200 rounded-xl shadow-sm p-4 space-y-4 lg:col-span-9 ${!selectedCustomerId ? 'hidden lg:block' : ''}`}>
+
+          {selectedCustomerId && (
+            <button
+              type="button"
+              className="lg:hidden flex items-center gap-1.5 text-sm text-slate-600 mb-1 -mt-1 hover:text-slate-800"
+              onClick={() => {
+                setSelectedCustomerId(null);
+                setSelectedCustomerOverview(null);
+                setSelectedCustomerHistory([]);
+              }}
+            >
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M15 18l-6-6 6-6"/></svg>
+              Voltar para clientes
+            </button>
+          )}
+
           {!selectedCustomer ? (
             <div className="text-sm text-slate-400">Nenhum cliente selecionado.</div>
           ) : loadingCustomerDetails ? (
@@ -672,121 +687,198 @@ const MarkedSales: React.FC = () => {
                 {selectedCustomerHistory.length === 0 ? (
                   <div className="p-4 text-sm text-slate-400">Nenhuma venda para este cliente.</div>
                 ) : (
-                  <div className="max-h-[280px] overflow-y-auto overflow-x-hidden">
-                    <table className="w-full table-fixed text-left text-xs text-slate-600">
-                      <colgroup>
-                        <col className="w-[8%]" />
-                        <col className="w-[14%]" />
-                        <col className="w-[12%]" />
-                        <col className="w-[14%]" />
-                        <col className="w-[14%]" />
-                        <col className="w-[14%]" />
-                        <col className="w-[24%]" />
-                      </colgroup>
-                      <thead className="bg-gray-50 text-xs uppercase text-slate-500 font-medium">
-                        <tr>
+                  <>
+                    {/* Mobile: cards por venda */}
+                    <div className="lg:hidden divide-y divide-gray-100">
+                      {selectedCustomerHistory.map((sale) => (
+                        <div key={sale.sale_id} className="p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-xs text-slate-400">#{sale.sale_id}</span>
+                              <span className="text-xs text-slate-500">{new Date(sale.created_at).toLocaleDateString('pt-BR')}</span>
+                            </div>
+                            <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                              sale.payment_status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
+                            }`}>
+                              {sale.payment_status === 'pending' ? 'A prazo' : 'Pago'}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="bg-gray-50 rounded-lg p-2 text-center">
+                              <p className="text-[10px] text-slate-500 uppercase tracking-wide">Pago</p>
+                              <p className="text-sm font-semibold text-emerald-700 mt-0.5">
+                                {Number(sale.paid_amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                              </p>
+                            </div>
+                            <div className="bg-gray-50 rounded-lg p-2 text-center">
+                              <p className="text-[10px] text-slate-500 uppercase tracking-wide">Falta</p>
+                              <p className="text-sm font-semibold text-amber-700 mt-0.5">
+                                {Number(sale.remaining_amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                              </p>
+                            </div>
+                            <div className="bg-gray-50 rounded-lg p-2 text-center">
+                              <p className="text-[10px] text-slate-500 uppercase tracking-wide">Total</p>
+                              <p className="text-sm font-semibold text-slate-900 mt-0.5">
+                                {Number(sale.total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                              </p>
+                            </div>
+                          </div>
+                          {sale.payment_status === 'pending' ? (
+                            <div className="space-y-2">
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={abatementValues[sale.sale_id] ?? ''}
+                                onChange={(event) =>
+                                  setAbatementValues((prev) => ({ ...prev, [sale.sale_id]: event.target.value }))
+                                }
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-slate-300 hide-spin"
+                                placeholder="Valor a abater"
+                                disabled={settlingSaleId === sale.sale_id || settlingTotalAbatement || settlingAllSales}
+                              />
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  className="flex-1 text-sm bg-white border border-slate-300 text-slate-700 rounded-lg py-2.5 hover:bg-slate-50 disabled:opacity-60 font-medium"
+                                  onClick={() => handleApplyAbatement(sale.sale_id)}
+                                  disabled={settlingSaleId === sale.sale_id || settlingTotalAbatement || settlingAllSales}
+                                >
+                                  Abater
+                                </button>
+                                <button
+                                  type="button"
+                                  className="flex-1 text-sm bg-emerald-600 text-white rounded-lg py-2.5 hover:bg-emerald-700 disabled:opacity-60 font-medium"
+                                  onClick={() => handleSettleSale(sale.sale_id)}
+                                  disabled={settlingSaleId === sale.sale_id || settlingTotalAbatement || settlingAllSales}
+                                >
+                                  {settlingSaleId === sale.sale_id ? 'Baixando...' : 'Quitar'}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="flex-1 text-sm bg-blue-600 text-white rounded-lg py-2.5 hover:bg-blue-700 disabled:opacity-60 font-medium"
+                                  onClick={() => handlePrintSale(sale.sale_id, sale)}
+                                  disabled={printingSaleId === sale.sale_id}
+                                >
+                                  {printingSaleId === sale.sale_id ? '...' : 'Imprimir'}
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              className="w-full text-sm bg-blue-600 text-white rounded-lg py-2.5 hover:bg-blue-700 disabled:opacity-60 font-medium"
+                              onClick={() => handlePrintSale(sale.sale_id, sale)}
+                              disabled={printingSaleId === sale.sale_id}
+                            >
+                              {printingSaleId === sale.sale_id ? 'Imprimindo...' : 'Imprimir'}
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    {/* Desktop: tabela */}
+                    <div className="hidden lg:block max-h-[280px] overflow-y-auto overflow-x-auto">
+                      <table className="w-full table-fixed text-left text-xs text-slate-600">
+                        <colgroup>
+                          <col className="w-[8%]" />
+                          <col className="w-[14%]" />
+                          <col className="w-[12%]" />
+                          <col className="w-[14%]" />
+                          <col className="w-[14%]" />
+                          <col className="w-[14%]" />
+                          <col className="w-[24%]" />
+                        </colgroup>
+                        <thead className="bg-gray-50 text-xs uppercase text-slate-500 font-medium">
+                          <tr>
                             <th className="px-1.5 py-2 tracking-wider">Venda</th>
                             <th className="px-2 py-2 tracking-wider">Data</th>
                             <th className="px-2 py-2 tracking-wider">Status</th>
-                              <th className="px-2 py-2 tracking-wider text-right">Pago</th>
-                              <th className="px-2 py-2 tracking-wider text-right">Falta</th>
+                            <th className="px-2 py-2 tracking-wider text-right">Pago</th>
+                            <th className="px-2 py-2 tracking-wider text-right">Falta</th>
                             <th className="px-2 py-2 tracking-wider text-right">Valor</th>
                             <th className="px-2 py-2 tracking-wider text-right">Ação</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {selectedCustomerHistory.map((sale) => (
-                          <tr key={sale.sale_id}>
-                            <td className="px-1.5 py-2 text-slate-500 whitespace-nowrap">#{sale.sale_id}</td>
-                            <td className="px-2 py-2">{new Date(sale.created_at).toLocaleDateString('pt-BR')}</td>
-                            <td className="px-2 py-2">
-                              <span
-                                className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                                  sale.payment_status === 'pending'
-                                    ? 'bg-amber-100 text-amber-700'
-                                    : 'bg-blue-100 text-blue-700'
-                                }`}
-                              >
-                                {sale.payment_status === 'pending' ? 'A prazo' : 'Pago'}
-                              </span>
-                            </td>
-                            <td className="px-2 py-2 text-right text-emerald-700 font-medium whitespace-nowrap">
-                              {Number(sale.paid_amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                            </td>
-                            <td className="px-2 py-2 text-right text-amber-700 font-medium whitespace-nowrap">
-                              {Number(sale.remaining_amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                            </td>
-                            <td className="px-2 py-2 text-right font-medium text-slate-900 whitespace-nowrap">
-                              {Number(sale.total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                            </td>
-                            <td className="px-2 py-2 text-right align-top">
-                              {sale.payment_status === 'pending' ? (
-                                <div className="ml-auto w-[136px] space-y-1.5">
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    value={abatementValues[sale.sale_id] ?? ''}
-                                    onChange={(event) =>
-                                      setAbatementValues((prev) => ({
-                                        ...prev,
-                                        [sale.sale_id]: event.target.value,
-                                      }))
-                                    }
-                                    className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-right focus:outline-none focus:ring-1 focus:ring-slate-300 hide-spin"
-                                    placeholder="Abater"
-                                  />
-                                  <div className="flex items-center justify-end gap-1.5">
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {selectedCustomerHistory.map((sale) => (
+                            <tr key={sale.sale_id}>
+                              <td className="px-1.5 py-2 text-slate-500 whitespace-nowrap">#{sale.sale_id}</td>
+                              <td className="px-2 py-2">{new Date(sale.created_at).toLocaleDateString('pt-BR')}</td>
+                              <td className="px-2 py-2">
+                                <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                                  sale.payment_status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
+                                }`}>
+                                  {sale.payment_status === 'pending' ? 'A prazo' : 'Pago'}
+                                </span>
+                              </td>
+                              <td className="px-2 py-2 text-right text-emerald-700 font-medium whitespace-nowrap">
+                                {Number(sale.paid_amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                              </td>
+                              <td className="px-2 py-2 text-right text-amber-700 font-medium whitespace-nowrap">
+                                {Number(sale.remaining_amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                              </td>
+                              <td className="px-2 py-2 text-right font-medium text-slate-900 whitespace-nowrap">
+                                {Number(sale.total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                              </td>
+                              <td className="px-2 py-2 text-right align-top">
+                                {sale.payment_status === 'pending' ? (
+                                  <div className="ml-auto w-[136px] space-y-1.5">
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="0.01"
+                                      value={abatementValues[sale.sale_id] ?? ''}
+                                      onChange={(event) =>
+                                        setAbatementValues((prev) => ({ ...prev, [sale.sale_id]: event.target.value }))
+                                      }
+                                      className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-right focus:outline-none focus:ring-1 focus:ring-slate-300 hide-spin"
+                                      placeholder="Abater"
+                                    />
+                                    <div className="flex items-center justify-end gap-1.5">
+                                      <button
+                                        type="button"
+                                        className="flex-1 text-[11px] bg-white border border-slate-300 text-slate-700 rounded-md px-2 py-1.5 hover:bg-slate-50 disabled:opacity-60 whitespace-nowrap"
+                                        onClick={() => handleApplyAbatement(sale.sale_id)}
+                                        disabled={settlingSaleId === sale.sale_id || settlingTotalAbatement || settlingAllSales}
+                                      >
+                                        Abater
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="flex-1 text-[11px] bg-emerald-600 text-white rounded-md px-2 py-1.5 hover:bg-emerald-700 disabled:opacity-60 whitespace-nowrap"
+                                        onClick={() => handleSettleSale(sale.sale_id)}
+                                        disabled={settlingSaleId === sale.sale_id || settlingTotalAbatement || settlingAllSales}
+                                      >
+                                        {settlingSaleId === sale.sale_id ? 'Baixando...' : 'Quitar'}
+                                      </button>
+                                    </div>
                                     <button
                                       type="button"
-                                      className="flex-1 text-[11px] bg-white border border-slate-300 text-slate-700 rounded-md px-2 py-1.5 hover:bg-slate-50 disabled:opacity-60 whitespace-nowrap"
-                                      onClick={() => handleApplyAbatement(sale.sale_id)}
-                                      disabled={
-                                        settlingSaleId === sale.sale_id ||
-                                        settlingTotalAbatement ||
-                                        settlingAllSales
-                                      }
+                                      className="w-full text-[11px] bg-blue-600 text-white rounded-md px-2 py-1.5 hover:bg-blue-700 disabled:opacity-60 whitespace-nowrap"
+                                      onClick={() => handlePrintSale(sale.sale_id, sale)}
+                                      disabled={printingSaleId === sale.sale_id}
                                     >
-                                      Abater
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="flex-1 text-[11px] bg-emerald-600 text-white rounded-md px-2 py-1.5 hover:bg-emerald-700 disabled:opacity-60 whitespace-nowrap"
-                                      onClick={() => handleSettleSale(sale.sale_id)}
-                                      disabled={
-                                        settlingSaleId === sale.sale_id ||
-                                        settlingTotalAbatement ||
-                                        settlingAllSales
-                                      }
-                                    >
-                                      {settlingSaleId === sale.sale_id ? 'Baixando...' : 'Quitar'}
+                                      {printingSaleId === sale.sale_id ? 'Imprimindo...' : 'Imprimir'}
                                     </button>
                                   </div>
+                                ) : (
                                   <button
                                     type="button"
-                                    className="w-full text-[11px] bg-blue-600 text-white rounded-md px-2 py-1.5 hover:bg-blue-700 disabled:opacity-60 whitespace-nowrap"
+                                    className="text-[11px] bg-blue-600 text-white rounded-md px-2 py-1.5 hover:bg-blue-700 disabled:opacity-60 whitespace-nowrap"
                                     onClick={() => handlePrintSale(sale.sale_id, sale)}
                                     disabled={printingSaleId === sale.sale_id}
                                   >
                                     {printingSaleId === sale.sale_id ? 'Imprimindo...' : 'Imprimir'}
                                   </button>
-                                </div>
-                              ) : (
-                                <button
-                                  type="button"
-                                  className="text-[11px] bg-blue-600 text-white rounded-md px-2 py-1.5 hover:bg-blue-700 disabled:opacity-60 whitespace-nowrap"
-                                  onClick={() => handlePrintSale(sale.sale_id, sale)}
-                                  disabled={printingSaleId === sale.sale_id}
-                                >
-                                  {printingSaleId === sale.sale_id ? 'Imprimindo...' : 'Imprimir'}
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
                 )}
               </div>
             </>

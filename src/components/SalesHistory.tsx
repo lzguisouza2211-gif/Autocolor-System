@@ -258,7 +258,53 @@ const SalesHistory: React.FC = () => {
       </div>
 
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
+        {/* Mobile: cards */}
+        <div className="lg:hidden">
+          {loading ? (
+            <div className="p-8 text-center text-slate-400">Carregando vendas...</div>
+          ) : sales.length === 0 ? (
+            <div className="p-8 text-center text-slate-400">Nenhuma venda registrada</div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {sales.map((sale) => {
+                const statusInfo = getSaleStatusInfo(sale);
+                return (
+                  <div key={sale.id} className="p-4 hover:bg-gray-50 transition">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono text-xs text-slate-400">#{sale.id}</span>
+                          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusInfo.badgeClass}`}>
+                            {statusInfo.label}
+                          </span>
+                        </div>
+                        <p className="text-sm font-semibold text-slate-900 mt-1 truncate">
+                          {sale.customers?.full_name || 'Balcão'}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          {new Date(sale.created_at).toLocaleDateString('pt-BR')} {new Date(sale.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end gap-2 shrink-0">
+                        <span className="text-base font-bold text-slate-900">
+                          R$ {parseFloat(sale.total.toString()).toFixed(2)}
+                        </span>
+                        <button
+                          onClick={() => openSaleDetail(sale)}
+                          className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                        >
+                          Ver detalhes
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        {/* Desktop: tabela */}
+        <div className="hidden lg:block overflow-x-auto">
           {loading ? (
             <div className="p-8 text-center text-slate-400">Carregando vendas...</div>
           ) : sales.length === 0 ? (
@@ -278,37 +324,35 @@ const SalesHistory: React.FC = () => {
               <tbody className="divide-y divide-gray-50">
                 {sales.map((sale) => {
                   const statusInfo = getSaleStatusInfo(sale);
-
                   return (
-                  <tr key={sale.id} className="hover:bg-gray-50 transition">
-                    <td className="px-4 py-3 font-mono text-xs text-slate-400">#{sale.id}</td>
-                    <td className="px-4 py-3 text-sm text-slate-600">
-                      {new Date(sale.created_at).toLocaleDateString('pt-BR')} {' '}
-                      <span className="text-xs text-gray-400">{new Date(sale.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-slate-600">
-                      {sale.customers?.full_name || 'Balcão'}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-slate-600">
-                      <span
-                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusInfo.badgeClass}`}
-                      >
-                        {statusInfo.label}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right text-sm font-semibold text-slate-900">
-                      R$ {parseFloat(sale.total.toString()).toFixed(2)}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <button
-                        onClick={() => openSaleDetail(sale)}
-                        className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                      >
-                        Ver detalhes
-                      </button>
-                    </td>
-                  </tr>
-                )})}
+                    <tr key={sale.id} className="hover:bg-gray-50 transition">
+                      <td className="px-4 py-3 font-mono text-xs text-slate-400">#{sale.id}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600">
+                        {new Date(sale.created_at).toLocaleDateString('pt-BR')}{' '}
+                        <span className="text-xs text-gray-400">{new Date(sale.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-600">
+                        {sale.customers?.full_name || 'Balcão'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-600">
+                        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusInfo.badgeClass}`}>
+                          {statusInfo.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right text-sm font-semibold text-slate-900">
+                        R$ {parseFloat(sale.total.toString()).toFixed(2)}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <button
+                          onClick={() => openSaleDetail(sale)}
+                          className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                        >
+                          Ver detalhes
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}

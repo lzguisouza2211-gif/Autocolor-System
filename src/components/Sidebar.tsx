@@ -74,9 +74,10 @@ const Sidebar: React.FC<SidebarProps> = ({ onOpenChange }) => {
 
   return (
     <SidebarOpenContext.Provider value={open}>
-      {/* Area sensivel invisivel para abrir o sidebar */}
+      {/* Area sensivel invisivel para abrir o sidebar — apenas desktop */}
       <div
         onMouseEnter={handleMouseEnter}
+        className="hidden lg:block"
         style={{
           width: open ? 0 : 12,
           minWidth: 0,
@@ -93,7 +94,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onOpenChange }) => {
         id="sidebar-autocolor"
         ref={sidebarRef}
         onMouseLeave={handleMouseLeave}
-        className={`h-screen flex flex-col py-4 shadow-xl border-r border-slate-200 bg-white transition-all duration-300 ease-in-out ${open ? 'w-[220px]' : 'w-[0px]'} relative overflow-hidden`}
+        className={`hidden lg:flex h-screen flex-col py-4 shadow-xl border-r border-slate-200 bg-white transition-all duration-300 ease-in-out ${open ? 'w-[220px]' : 'w-[0px]'} relative overflow-hidden`}
         style={{ transitionProperty: 'width, box-shadow, background', transitionDuration: '300ms', zIndex: 20 }}
       >
         {/* Logo ou icone do sistema */}

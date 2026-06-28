@@ -84,6 +84,15 @@ const PDV: React.FC = () => {
   const [paidNowValue, setPaidNowValue] = useState('0');
   const isCreditSale = saleType === 'credit';
 
+  const [isMobile, setIsMobile] = React.useState(() =>
+    typeof window !== 'undefined' && window.innerWidth < 1024
+  );
+  React.useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 1024);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+
   // Cálculo de totais (deve vir antes de hooks que dependem deles)
   const total = React.useMemo(() => cart.reduce((sum, item) => sum + item.subtotal, 0), [cart]);
   const desconto = React.useMemo(() => cart.reduce((sum, item) => sum + (item.discount * item.quantity), 0), [cart]);
@@ -756,7 +765,7 @@ const PDV: React.FC = () => {
     <div className="w-full h-full p-0 m-0">
       <div className="w-full h-full bg-transparent relative">
         {/* Coluna esquerda: busca e resultados - APENAS DESKTOP */}
-        <div className="flex flex-col h-full bg-white p-10 max-w-4xl mx-auto">
+        <div className="flex flex-col h-full bg-white p-4 lg:p-10 lg:max-w-4xl lg:mx-auto">
           <div className="flex items-center justify-between mb-4">
             <div className="font-semibold text-xl md:text-2xl">Pedido {pedidoNumero}</div>
             {/* Botão de lixeira superior removido conforme solicitado */}
@@ -788,7 +797,34 @@ const PDV: React.FC = () => {
           )}
           {search.length > 0 && filteredProducts.length > 0 && (
             <>
-              <ul className="bg-white border rounded-lg shadow max-h-[520px] overflow-y-auto mt-3 z-10 relative divide-y">
+              {/* Mobile: grid de 2 colunas com cards touch-friendly */}
+              <div className="lg:hidden grid grid-cols-2 gap-2 mt-3 overflow-y-auto pb-2" style={{ maxHeight: 'calc(100vh - 220px)' }}>
+                {filteredProducts.map((prod) => (
+                  <div
+                    key={prod.id}
+                    className={`bg-white border rounded-xl p-3 select-none transition ${
+                      prod.stock < 1
+                        ? 'opacity-60 border-red-200 bg-red-50'
+                        : 'cursor-pointer border-gray-200 active:bg-blue-50 active:border-blue-300'
+                    }`}
+                    onClick={() => { if (prod.stock > 0) addToCart(prod); }}
+                    aria-disabled={prod.stock < 1}
+                  >
+                    <div className={`font-semibold text-sm leading-tight ${prod.stock < 1 ? 'text-red-700' : 'text-slate-900'}`}>
+                      {prod.name}
+                    </div>
+                    {prod.category && <div className="text-xs text-gray-400 mt-0.5 truncate">{prod.category}</div>}
+                    <div className={`font-bold text-base mt-2 ${prod.stock < 1 ? 'text-red-600' : 'text-slate-900'}`}>
+                      R$ {(prod.price_sale ?? prod.price).toFixed(2)}
+                    </div>
+                    <div className={`text-xs mt-0.5 ${prod.stock < 1 ? 'text-red-500' : 'text-gray-400'}`}>
+                      {prod.stock < 1 ? 'Sem estoque' : `Est: ${prod.stock}`}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* Desktop: lista detalhada */}
+              <ul className="hidden lg:block bg-white border rounded-lg shadow max-h-[520px] overflow-y-auto mt-3 z-10 relative divide-y">
                 {filteredProducts.map((prod, idx) => (
                   <li
                     key={prod.id}
@@ -800,7 +836,6 @@ const PDV: React.FC = () => {
                     onClick={() => {
                       if (prod.stock > 0) {
                         addToCart(prod);
-                        // Mantém o dropdown aberto e o input preenchido
                       }
                     }}
                     tabIndex={-1}
@@ -844,7 +879,7 @@ const PDV: React.FC = () => {
         {/* Floating Cart Button */}
         {!cartOpen && (
           <button
-            className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white rounded-full shadow-lg p-4 flex items-center justify-center hover:bg-slate-800 transition-all duration-200"
+            className="fixed bottom-24 right-4 lg:bottom-6 lg:right-6 z-50 bg-slate-900 text-white rounded-full shadow-lg p-4 flex items-center justify-center hover:bg-slate-800 transition-all duration-200"
             style={{ minWidth: 56, minHeight: 56, boxShadow: '0 4px 24px rgba(0,0,0,0.18)', position: 'fixed' }}
             onClick={() => setCartOpen(true)}
             aria-label="Abrir carrinho"
@@ -868,16 +903,24 @@ const PDV: React.FC = () => {
               aria-label="Fechar carrinho"
             />
             <div
-              className="fixed top-0 right-0 z-50 w-full max-w-full h-screen bg-white border-l border-gray-200 flex flex-col p-2 lg:p-4 shadow-2xl transition-all duration-300"
+              className={`fixed z-50 bg-white flex flex-col shadow-2xl ${
+                isMobile
+                  ? 'bottom-0 left-0 right-0 rounded-t-2xl p-3 animate-slide-in-from-bottom'
+                  : 'top-0 right-0 border-l border-gray-200 p-4 animate-slide-in-from-right'
+              }`}
               style={{
-                transition: 'transform 0.3s, opacity 0.3s',
                 boxShadow: '0 4px 32px rgba(0,0,0,0.18)',
-                transform: cartOpen ? 'translateX(0)' : 'translateX(100%)',
-                opacity: cartOpen ? 1 : 0,
                 width: '100%',
-                maxWidth: '600px' // até metade de uma tela fullhd
+                maxWidth: isMobile ? undefined : '600px',
+                height: isMobile ? '92vh' : '100vh',
               }}
             >
+              {/* Handle bar para mobile bottom sheet */}
+              {isMobile && (
+                <div className="flex justify-center mb-3">
+                  <div className="w-10 h-1 rounded-full bg-gray-300" />
+                </div>
+              )}
               {/* Botão de fechar */}
               <div className="flex items-center justify-between mb-2">
                 <button
@@ -931,25 +974,25 @@ const PDV: React.FC = () => {
               />
             </div>
             {search.length > 0 && filteredProducts.length > 0 && (
-              <div className="grid grid-cols-1 gap-2 mt-2 z-10 relative">
+              <div className="grid grid-cols-2 gap-2 mt-2 z-10 relative max-h-[35vh] overflow-y-auto">
                 {filteredProducts.map((prod) => (
                   <div
                     key={prod.id}
-                    className="p-3 bg-white border border-gray-200 rounded-lg hover:bg-blue-50 cursor-pointer active:bg-blue-100 transition"
-                    onClick={() => addToCart(prod)}
+                    className={`p-3 bg-white border rounded-xl transition select-none ${
+                      prod.stock < 1
+                        ? 'opacity-60 border-red-200 bg-red-50'
+                        : 'cursor-pointer border-gray-200 active:bg-blue-50 active:border-blue-300'
+                    }`}
+                    onClick={() => { if (prod.stock > 0) addToCart(prod); }}
+                    aria-disabled={prod.stock < 1}
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-slate-900 text-sm">{prod.name}</div>
-                        <div className="text-xs text-gray-500 flex flex-wrap gap-1 mt-1">
-                          {prod.category && <span className="px-1.5 py-0.5 bg-gray-100 rounded">#{prod.category}</span>}
-                          {prod.mark && <span className="px-1.5 py-0.5 bg-gray-100 rounded">#{prod.mark}</span>}
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end flex-shrink-0">
-                        <div className="font-bold text-slate-900 text-sm">R$ {(prod.price_sale ?? prod.price).toFixed(2)}</div>
-                        <div className="text-xs text-gray-500 mt-1">Est: {prod.stock}</div>
-                      </div>
+                    <div className={`font-semibold text-sm leading-tight ${prod.stock < 1 ? 'text-red-700' : 'text-slate-900'}`}>{prod.name}</div>
+                    {prod.category && <div className="text-xs text-gray-400 mt-0.5 truncate">{prod.category}</div>}
+                    <div className={`font-bold text-base mt-1.5 ${prod.stock < 1 ? 'text-red-600' : 'text-slate-900'}`}>
+                      R$ {(prod.price_sale ?? prod.price).toFixed(2)}
+                    </div>
+                    <div className={`text-xs mt-0.5 ${prod.stock < 1 ? 'text-red-500' : 'text-gray-400'}`}>
+                      {prod.stock < 1 ? 'Sem estoque' : `Est: ${prod.stock}`}
                     </div>
                   </div>
                 ))}

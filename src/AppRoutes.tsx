@@ -113,7 +113,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="bg-gray-50 text-slate-800 font-sans h-screen flex flex-col overflow-hidden lg:flex-row">
       <Sidebar />
-      <main className="flex-1 flex flex-col h-full overflow-hidden bg-gray-50/50 relative">
+      <main className="flex-1 flex flex-col overflow-hidden bg-gray-50/50 relative">
         <Header />
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8">
           {children}
@@ -129,7 +129,7 @@ function PDVLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="bg-gray-50 text-slate-800 font-sans h-screen flex flex-col overflow-hidden lg:flex-row">
       <Sidebar />
-      <main className="flex-1 flex flex-col h-full overflow-hidden bg-white relative">
+      <main className="flex-1 flex flex-col overflow-hidden bg-white relative">
         <Header />
         <div className="flex-1 overflow-hidden">
           {children}

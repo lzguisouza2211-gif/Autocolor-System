@@ -49,7 +49,39 @@ const RecentSalesTable: React.FC = () => {
           <button className="text-xs text-slate-500 hover:text-slate-900" onClick={() => navigate('/historico-vendas')}>Ver todas</button>
         </div>
       </div>
-      <div className="overflow-x-auto">
+      {/* Mobile: cards */}
+      <div className="lg:hidden">
+        {loading ? (
+          <div className="p-8 text-center text-slate-400">Carregando vendas...</div>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {sales.map((sale, idx) => (
+              <div key={idx} className="px-4 py-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs text-slate-400">#{sale.id}</span>
+                      <span className="text-xs text-slate-400">{new Date(sale.created_at).toLocaleDateString('pt-BR')}</span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                      {sale.sale_items && sale.sale_items.length > 0
+                        ? sale.sale_items.map((item: any) =>
+                            `${item.quantity}x ${item.products?.name || `Produto ${item.product_id}`}`
+                          ).join(', ')
+                        : '-'}
+                    </p>
+                  </div>
+                  <span className="text-sm font-semibold text-slate-900 shrink-0">
+                    R$ {Number(sale.total).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      {/* Desktop: tabela */}
+      <div className="hidden lg:block overflow-x-auto">
         {loading ? (
           <div className="p-8 text-center text-slate-400">Carregando vendas...</div>
         ) : (
@@ -68,7 +100,7 @@ const RecentSalesTable: React.FC = () => {
                   <td className="px-3 sm:px-4 py-2 font-mono text-xs text-slate-400">#{sale.id}</td>
                   <td className="px-3 sm:px-4 py-2 text-slate-500 text-xs sm:text-sm">
                     {sale.sale_items && sale.sale_items.length > 0
-                      ? sale.sale_items.map((item: any) => 
+                      ? sale.sale_items.map((item: any) =>
                           `${item.quantity}x ${item.products?.name || `Produto ${item.product_id}`}`
                         ).join(', ')
                       : '-'}
