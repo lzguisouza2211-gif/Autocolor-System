@@ -1,6 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useProducts } from '../contexts/ProductsContext';
 import { Icon } from '@iconify/react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../supabase';
@@ -23,28 +24,10 @@ const ProductsTable: React.FC = () => {
   const [searchParams] = useSearchParams();
   const estoqueFilter = searchParams.get('estoque');
   const { user, loading: authLoading } = useAuth();
-  const [products, setProducts] = useState<Product[]>([]);
+  const { products, loading, refetch } = useProducts();
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
-
-  const fetchProducts = async () => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .is('deleted_at', null);
-    if (!error && data) {
-      setProducts(data);
-    }
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    if (!user) return;
-    fetchProducts();
-  }, [user]);
 
   if (authLoading || !user) {
     return (
@@ -76,7 +59,7 @@ const ProductsTable: React.FC = () => {
 
   const handleSave = () => {
     setShowForm(false);
-    fetchProducts();
+    refetch();
   };
 
   // Soft delete
@@ -88,13 +71,13 @@ const ProductsTable: React.FC = () => {
       .from('products')
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', productId);
-    
+
     if (error) {
       console.error('Erro ao excluir produto:', error);
       alert('Erro ao excluir produto: ' + error.message);
       return;
     }
-    fetchProducts();
+    refetch();
   };
 
   // Filtro de busca

@@ -8,6 +8,7 @@ import Header from './components/Header';
 import MobileMenu from './components/MobileMenu';
 import Login from './components/Login';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ProductsProvider } from './contexts/ProductsContext';
 import PDV from './components/PDV';
 import SalesHistory from './components/SalesHistory';
 import Customers from './components/Customers';
@@ -142,6 +143,7 @@ function PDVLayout({ children }: { children: React.ReactNode }) {
 function App() {
   return (
     <AuthProvider>
+      <ProductsProvider>
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
@@ -255,6 +257,7 @@ function App() {
           />
         </Routes>
       </BrowserRouter>
+      </ProductsProvider>
     </AuthProvider>
   );
 }

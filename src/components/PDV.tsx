@@ -4,6 +4,7 @@ import BarcodeScanner from './BarcodeScanner';
 import { FiTrash2 } from 'react-icons/fi';
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useProducts } from '../contexts/ProductsContext';
 
 interface Product {
   id: number;
@@ -61,10 +62,9 @@ const PDV: React.FC = () => {
     };
   // Estados
   const { user } = useAuth();
+  const { products, loading } = useProducts();
   const [search, setSearch] = useState('');
-  const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [finalizing, setFinalizing] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [addSuccess, setAddSuccess] = useState<string | null>(null);
@@ -236,16 +236,6 @@ const PDV: React.FC = () => {
       }
     }
     setCartLoaded(true);
-
-    // Carregar produtos
-    supabase
-      .from('products')
-      .select('*')
-      .is('deleted_at', null)
-      .then(({ data, error }) => {
-        setProducts(error ? [] : data || []);
-        setLoading(false);
-      });
 
     // Carregar clientes para vincular na venda
     setLoadingCustomers(true);

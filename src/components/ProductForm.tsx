@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import BarcodeScanner from './BarcodeScanner';
 import { supabase } from '../supabase';
+import { useProducts } from '../contexts/ProductsContext';
 
 interface ProductFormProps {
   product?: any;
@@ -20,31 +21,15 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave }) => {
     price_sale: product?.price_sale || '',
     barcode: product?.barcode || '',
   });
+  const { categories, brands } = useProducts();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [categories, setCategories] = useState<string[]>([]);
   const [newCategory, setNewCategory] = useState('');
-  const [brands, setBrands] = useState<string[]>([]);
   const [newBrand, setNewBrand] = useState('');
   const [success, setSuccess] = useState<string | null>(null);
   const [isRestocking, setIsRestocking] = useState(false);
   const [existingProduct, setExistingProduct] = useState<any>(null);
   const [restockQuantity, setRestockQuantity] = useState('1');
-
-  React.useEffect(() => {
-    const fetchCategoriesAndBrands = async () => {
-      const { data, error } = await supabase
-        .from('products')
-        .select('category, mark');
-      if (!error && data) {
-        const uniqueCats = Array.from(new Set(data.map((p: any) => p.category).filter(Boolean)));
-        setCategories(uniqueCats);
-        const uniqueBrands = Array.from(new Set(data.map((p: any) => p.mark).filter(Boolean)));
-        setBrands(uniqueBrands);
-      }
-    };
-    fetchCategoriesAndBrands();
-  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });

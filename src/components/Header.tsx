@@ -1,40 +1,15 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../supabase';
-
-type LowStockProduct = {
-  id: number;
-  name: string;
-  stock: number;
-};
+import { useProducts } from '../contexts/ProductsContext';
 
 const Header: React.FC = () => {
   const [dateTime, setDateTime] = useState<string>('');
-  const [lowStock, setLowStock] = useState<LowStockProduct[]>([]);
-  const [loadingStock, setLoadingStock] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const { lowStockProducts, loading: loadingStock } = useProducts();
 
-  const CRITICAL_STOCK_THRESHOLD = 10;
-
-  const lowStockCount = useMemo(() => lowStock.length, [lowStock]);
-
-  const fetchLowStock = async () => {
-    setLoadingStock(true);
-    const { data, error } = await supabase
-      .from('products')
-      .select('id, name, stock')
-      .is('deleted_at', null)
-      .lte('stock', CRITICAL_STOCK_THRESHOLD);
-
-    if (!error && data) {
-      // Ordena por nome
-      const sorted = [...data].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
-      setLowStock(sorted as LowStockProduct[]);
-    }
-    setLoadingStock(false);
-  };
+  const lowStockCount = lowStockProducts.length;
 
   useEffect(() => {
     const updateDateTime = () => {
@@ -53,25 +28,6 @@ const Header: React.FC = () => {
     updateDateTime();
     const interval = setInterval(updateDateTime, 60000);
     return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    fetchLowStock();
-
-    const channel = supabase
-      .channel('products-low-stock')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'products' },
-        () => {
-          fetchLowStock();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, []);
 
   useEffect(() => {
@@ -133,11 +89,11 @@ const Header: React.FC = () => {
               <div className="max-h-72 overflow-y-auto">
                 {loadingStock ? (
                   <div className="px-4 py-3 text-sm text-slate-500">Carregando...</div>
-                ) : lowStock.length === 0 ? (
+                ) : lowStockProducts.length === 0 ? (
                   <div className="px-4 py-6 text-sm text-slate-500">Sem alertas de estoque crítico.</div>
                 ) : (
                   <ul className="divide-y divide-gray-100">
-                    {lowStock.map((product) => (
+                    {lowStockProducts.map((product) => (
                       <li key={product.id} className="px-4 py-3 hover:bg-gray-50">
                         <div className="flex items-center justify-between gap-2">
                           <div className="min-w-0">

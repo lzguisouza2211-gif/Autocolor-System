@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useProducts } from '../contexts/ProductsContext';
 
 interface SaleDetail {
   id: number;
@@ -37,17 +38,6 @@ interface SaleDetail {
   }>;
 }
 
-interface Product {
-  id: number;
-  name: string;
-  price: number;
-  price_sale?: number;
-  stock: number;
-  barcode?: string;
-  category?: string;
-  mark?: string;
-}
-
 interface CustomerOption {
   id: number;
   full_name: string;
@@ -56,12 +46,31 @@ interface CustomerOption {
   phone: string | null;
 }
 
+interface UserRow {
+  id: string;
+  name: string | null;
+  email: string;
+}
+
+interface CustomerRow {
+  id: number;
+  full_name: string;
+  cpf: string | null;
+  cnpj: string | null;
+  phone: string | null;
+  street: string | null;
+  address_number: string | null;
+  neighborhood: string | null;
+}
+
+type EditedItem = SaleDetail['sale_items'][number] & { custom_name?: string | null };
+
 const SalesHistory: React.FC = () => {
       // Modal de confirmação de exclusão
       const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
       const [deleteLoading, setDeleteLoading] = useState(false);
-    // Produtos para autocomplete
-    const [products, setProducts] = useState<Product[]>([]);
+    // Produtos para autocomplete (via contexto global)
+    const { products } = useProducts();
     const [productSearch, setProductSearch] = useState('');
     const [showProductDropdown, setShowProductDropdown] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -74,60 +83,22 @@ const SalesHistory: React.FC = () => {
     const [selectedSale, setSelectedSale] = useState<SaleDetail | null>(null);
     const [showModal, setShowModal] = useState(false);
     const [editMode, setEditMode] = useState(false);
-    const [editedItems, setEditedItems] = useState<any[]>([]);
+    const [editedItems, setEditedItems] = useState<EditedItem[]>([]);
     const [customers, setCustomers] = useState<CustomerOption[]>([]);
     const [loadingCustomers, setLoadingCustomers] = useState(false);
     const [editedCustomerId, setEditedCustomerId] = useState<number | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
 
-    useEffect(() => {
-      if (!editMode) return;
-      // Carregar produtos ao entrar no modo de edição
-      supabase
-        .from('products')
-        .select('*')
-        .is('deleted_at', null)
-        .then(({ data, error }) => {
-          if (error) {
-            console.error('Erro ao buscar produtos:', error);
-          } else {
-            console.log('Produtos carregados:', data);
-          }
-          setProducts(error ? [] : data || []);
-        });
-
-      setLoadingCustomers(true);
-      supabase
-        .from('customers')
-        .select('id, full_name, cpf, cnpj, phone')
-        .order('full_name', { ascending: true })
-        .then(({ data, error }) => {
-          if (error) {
-            console.error('Erro ao buscar clientes:', error);
-            setCustomers([]);
-          } else {
-            setCustomers((data || []) as CustomerOption[]);
-          }
-          setLoadingCustomers(false);
-        });
-    }, [editMode]);
-    // Produtos filtrados para busca
-    const filteredProducts = products.filter(p => {
-      const s = productSearch.toLowerCase();
-      return (
-        p.name.toLowerCase().includes(s) ||
-        (p.category || '').toLowerCase().includes(s) ||
-        (p.mark || '').toLowerCase().includes(s) ||
-        (p.barcode || '').toLowerCase().includes(s)
-      );
-    });
-  // (Removido: já declarado acima para evitar redeclaração)
-
-  useEffect(() => {
-    if (!user) return;
-    checkAdminStatus();
-    fetchAllSales();
-  }, [user]);
+  // Produtos filtrados para busca
+  const filteredProducts = products.filter(p => {
+    const s = productSearch.toLowerCase();
+    return (
+      p.name.toLowerCase().includes(s) ||
+      (p.category || '').toLowerCase().includes(s) ||
+      (p.mark || '').toLowerCase().includes(s) ||
+      (p.barcode || '').toLowerCase().includes(s)
+    );
+  });
 
   // Controlar overflow do body quando modal está aberto
   useEffect(() => {
@@ -141,15 +112,31 @@ const SalesHistory: React.FC = () => {
     };
   }, [showModal]);
 
+  useEffect(() => {
+    if (!editMode) return;
+    setLoadingCustomers(true);
+    supabase
+      .from('customers')
+      .select('id, full_name, cpf, cnpj, phone')
+      .order('full_name', { ascending: true })
+      .then(({ data, error }) => {
+        if (error) {
+          console.error('Erro ao buscar clientes:', error);
+          setCustomers([]);
+        } else {
+          setCustomers((data || []) as CustomerOption[]);
+        }
+        setLoadingCustomers(false);
+      });
+  }, [editMode]);
+
   const checkAdminStatus = async () => {
     if (!user?.email) return;
-    
     const { data } = await supabase
       .from('users')
       .select('role')
       .eq('email', user.email)
       .single();
-
     setIsAdmin(data?.role === 'admin');
   };
 
@@ -158,16 +145,16 @@ const SalesHistory: React.FC = () => {
     const { data: salesData } = await supabase
       .from('sales')
       .select(`
-        id, 
-        total, 
+        id,
+        total,
         created_at,
         payment_status,
         paid_at,
         user_id,
         customer_id,
         sale_items!fk_sale_items_sale_id (
-          product_id, 
-          quantity, 
+          product_id,
+          quantity,
           price,
           original_price,
           discount,
@@ -178,40 +165,45 @@ const SalesHistory: React.FC = () => {
       .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
-    if (salesData) {
-      // Buscar informações dos usuários manualmente
-      const salesWithUsers = await Promise.all(
-        salesData.map(async (sale) => {
-          let userData = null;
-          let customerData = null;
-
-          if (sale.user_id) {
-            const { data } = await supabase
-              .from('users')
-              .select('name, email')
-              .eq('id', sale.user_id)
-              .single();
-            userData = data;
-          }
-
-          if (sale.customer_id) {
-            const { data } = await supabase
-              .from('customers')
-              .select('full_name, cpf, cnpj, phone, street, address_number, neighborhood')
-              .eq('id', sale.customer_id)
-              .maybeSingle();
-            customerData = data ?? null;
-          }
-
-          return { ...sale, users: userData, customers: customerData };
-        })
-      );
-      setSales(salesWithUsers as any);
+    if (!salesData) {
+      setLoading(false);
+      return;
     }
+
+    // Coleta IDs únicos e busca usuários + clientes em paralelo (resolve N+1)
+    const userIds = [...new Set(salesData.map(s => s.user_id).filter(Boolean))] as string[];
+    const customerIds = [...new Set(salesData.map(s => s.customer_id).filter(Boolean))] as number[];
+
+    const [usersResult, customersResult] = await Promise.all([
+      userIds.length > 0
+        ? supabase.from('users').select('id, name, email').in('id', userIds)
+        : Promise.resolve({ data: [] as UserRow[] }),
+      customerIds.length > 0
+        ? supabase.from('customers').select('id, full_name, cpf, cnpj, phone, street, address_number, neighborhood').in('id', customerIds)
+        : Promise.resolve({ data: [] as CustomerRow[] }),
+    ]);
+
+    const usersMap = new Map<string, UserRow>((usersResult.data as UserRow[] || []).map(u => [u.id, u]));
+    const customersMap = new Map<number, CustomerRow>((customersResult.data as CustomerRow[] || []).map(c => [c.id, c]));
+
+    const salesWithRelations = salesData.map(sale => ({
+      ...sale,
+      users: sale.user_id ? (usersMap.get(sale.user_id) ?? null) : null,
+      customers: sale.customer_id ? (customersMap.get(sale.customer_id) ?? null) : null,
+    }));
+
+    setSales(salesWithRelations as unknown as SaleDetail[]);
     setLoading(false);
   };
 
-  const calculateTotalDiscount = (saleItems: any[]) => {
+  useEffect(() => {
+    if (!user) return;
+    checkAdminStatus();
+    fetchAllSales();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  const calculateTotalDiscount = (saleItems: SaleDetail['sale_items']) => {
     return saleItems.reduce((sum, item) => sum + (item.discount * item.quantity), 0);
   };
 
@@ -696,7 +688,7 @@ const SalesHistory: React.FC = () => {
                           }
                           setSuccess('Notinha foi enviada para impressão!');
                           setTimeout(() => setSuccess(null), 2000);
-                        } catch (err) {
+                        } catch {
                           setSuccess('Erro ao imprimir pedido. Verifique o servidor de impressão.');
                           setTimeout(() => setSuccess(null), 2000);
                         }
@@ -878,12 +870,12 @@ const SalesHistory: React.FC = () => {
                             customerData = data ?? null;
                           }
                           // Corrigir estrutura de sale_items: garantir que products seja objeto { name: string }
-                          const fixedSaleItems = Array.isArray(updatedSale.sale_items)
-                            ? updatedSale.sale_items.map((item: any) => ({
+                          const fixedSaleItems = (Array.isArray(updatedSale.sale_items)
+                            ? updatedSale.sale_items.map((item: Record<string, unknown>) => ({
                                 ...item,
                                 products: Array.isArray(item.products) ? (item.products[0] || { name: '' }) : item.products
                               }))
-                            : [];
+                            : []) as SaleDetail['sale_items'];
                           setSelectedSale({
                             ...updatedSale,
                             users: userData ?? undefined,
