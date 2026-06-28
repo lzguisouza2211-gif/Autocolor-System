@@ -64,3 +64,28 @@ Registro cronológico de todas as implementações, correções e melhorias do p
 **Arquivos:**
 - `mind/post-commit.sh` — backup versionado do hook git
 - `mind/setup-autodocs.sh` — script de setup para reinstalação do hook
+
+
+
+## 28/06/2026
+
+**Commit:** `b5bb5d0` — perf: cache global de produtos e correção de N+1 no histórico de vendas
+
+**Implementações:**
+- Criado `ProductsContext` (`src/contexts/ProductsContext.tsx`) com uma única query ao Supabase para buscar produtos, categorias, marcas e produtos com estoque crítico — query executada uma vez na autenticação e compartilhada via realtime entre todos os componentes consumidores
+- `ProductsProvider` adicionado em `AppRoutes.tsx` envolvendo toda a árvore da aplicação, logo abaixo do `AuthProvider`
+- `Header.tsx`: removida query própria ao Supabase e subscription realtime redundante; passa a consumir `lowStockProducts` e `loading` via `useProducts()`
+- `PDV.tsx`: removida query local de produtos; passa a consumir `products` e `loading` via `useProducts()`
+- `ProductForm.tsx`: removida query local para obter categorias e marcas únicas; passa a consumir `categories` e `brands` via `useProducts()`
+- `ProductsTable.tsx`: removida função `fetchProducts` e estado local; passa a consumir `products`, `loading` e `refetch` via `useProducts()`
+- `SalesHistory.tsx`: removida lista local de produtos; passa a consumir `products` via `useProducts()`. Substituídas N+1 queries (uma por venda) por 3 queries fixas em paralelo para buscar usuários e clientes de todas as vendas de uma só vez
+- Adicionados tipos `UserRow` e `CustomerRow` em `SalesHistory.tsx`; criado tipo `EditedItem` para substituir `any[]` nos itens editados
+
+**Arquivos alterados:**
+- `src/AppRoutes.tsx`
+- `src/components/Header.tsx`
+- `src/components/PDV.tsx`
+- `src/components/ProductForm.tsx`
+- `src/components/ProductsTable.tsx`
+- `src/components/SalesHistory.tsx`
+- `src/contexts/ProductsContext.tsx` *(novo)*

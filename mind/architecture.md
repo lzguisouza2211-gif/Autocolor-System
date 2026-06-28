@@ -88,3 +88,33 @@ git commit → post-commit hook → generate-docs.py
 - Variável de ambiente: funciona, mas requer que o script filho a exporte corretamente; menos legível
 
 **Trade-off:** A mensagem do commit é um contrato implícito — se outro commit legítimo contiver as palavras-chave de guard por coincidência, o AutoDocs será silenciado. Aceitável dado o contexto de uso interno.
+
+
+
+## Cache Global de Produtos via Context API
+
+**Data:** 28/06/2026
+
+**Decisão:** Centralizar o carregamento de produtos em um `ProductsContext` único, instanciado na raiz da aplicação (abaixo do `AuthProvider`), compartilhado por todos os componentes via `useProducts()`.
+
+**Problema que motivou:** Cinco componentes (`Header`, `PDV`, `ProductForm`, `ProductsTable`, `SalesHistory`) faziam queries independentes ao Supabase para buscar a mesma tabela `products`. A cada navegação, uma nova query era disparada. O `Header` ainda mantinha uma subscription realtime própria para alertas de estoque crítico, duplicando o canal.
+
+**Estrutura do contexto:**
+```
+ProductsContext
+  ├── products[]          — lista completa de produtos ativos
+  ├── lowStockProducts[]  — derivado: produtos com estoque ≤ threshold
+  ├── categories[]        — derivado: categorias únicas
+  ├── brands[]            — derivado: marcas únicas
+  ├── loading             — estado de carregamento inicial
+  └── refetch()           — força re-busca manual (pós-mutação local)
+```
+
+**Realtime:** O contexto mantém uma única subscription ao canal `products-realtime` do Supabase. Qualquer INSERT/UPDATE/DELETE na tabela `products` atualiza todos os consumidores automaticamente.
+
+**Alternativas consideradas e descartadas:**
+- React Query / SWR: resolveria o problema mas adiciona dependência externa desnecessária para um único recurso
+- Estado global (Zustand/Redux): overhead arquitetural desproporcional ao tamanho do projeto
+- Prop drilling: inviável — os consumidores estão em níveis distintos da árvore
+
+**Consequências:** Qualquer novo componente que precise de dados de produtos deve consumir `useProducts()` em vez de fazer query direta ao Supabase. Queries diretas à tabela `products` fora do contexto são consideradas um smell arquitetural a partir deste commit.

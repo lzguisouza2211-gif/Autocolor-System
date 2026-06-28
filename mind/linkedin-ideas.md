@@ -54,3 +54,19 @@ O problema: `mind/generate-docs.py` **vive no repositório**. Em qualquer commit
 **O aprendizado:** Em automações recursivas, o identificador do ciclo deve ser algo que **você controla ativamente**, não um efeito colateral. A mensagem do commit é definida intencionalmente; a lista de arquivos é um acidente de contexto.
 
 **Dica para outros devs:** Se você tem um hook git que gera commits, nunca use a presença do script em `--name-only` como guard de recursão. Use uma flag explícita na mensagem ou uma variável de ambiente exportada pelo processo pai.
+
+
+
+## Ideia — 28/06/2026
+
+**Título:** Meu app React fazia 5 queries ao banco para mostrar a mesma lista. Veja como resolvi sem Redux nem React Query.
+
+**O problema:** No AutoColor System (PDV que estou construindo), percebi que cada tela buscava a lista de produtos do Supabase por conta própria. O Header buscava para mostrar alertas de estoque. O PDV buscava para o carrinho. O formulário de produto buscava para preencher os dropdowns de categoria. A tabela de produtos buscava para listar. O histórico de vendas buscava para o autocomplete. Cinco componentes. Uma mesma tabela. Cinco queries a cada navegação.
+
+**Como resolvi:** Criei um `ProductsContext` simples — uma única query ao Supabase no momento em que o usuário autentica, com uma subscription realtime para manter os dados frescos. Todos os componentes consomem `useProducts()` em vez de ir ao banco. Os dados derivados (categorias, marcas, produtos com estoque crítico) são calculados uma vez dentro do contexto e ficam disponíveis para qualquer consumidor.
+
+**O aprendizado:** Context API não é só para tema e autenticação. Para dados que mudam pouco e são usados em muitos lugares, um contexto com realtime é uma cache eficiente sem nenhuma dependência extra. O ponto chave é expor também um `refetch()` manual — o realtime cobre mudanças externas, mas para mutações que o próprio usuário fez, você quer atualização imediata antes do evento chegar.
+
+No histórico de vendas, o problema era diferente: N+1 clássico. Para cada venda exibida, uma query buscava o usuário e o cliente responsável. Com 50 vendas no histórico, eram 51 queries. Substituí por 3 queries paralelas com `Promise.all` — uma para vendas com itens, uma para todos os usuários referenciados, uma para todos os clientes — e montei os dados em memória.
+
+**Dica para outros devs:** Antes de adicionar React Query ou Zustand, pergunte: quantas vezes esse dado muda por sessão? Se a resposta for "pouco", um Context com realtime resolve com zero dependências. Reserve bibliotecas de estado/cache para quando a complexidade justificar.
