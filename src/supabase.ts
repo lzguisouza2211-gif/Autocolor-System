@@ -24,4 +24,16 @@ function getSupabaseConfig() {
 
 const { supabaseUrl, supabaseAnonKey } = getSupabaseConfig();
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  global: {
+    // Se o banco recusar a sessão (401, ex.: "JWT expired"), avisa o app para
+    // voltar ao login, em vez de as telas mostrarem tudo zerado.
+    fetch: async (input, init) => {
+      const res = await fetch(input, init);
+      if (res.status === 401 && !String(input).includes('/auth/v1/')) {
+        window.dispatchEvent(new Event('auth:expired'));
+      }
+      return res;
+    },
+  },
+});

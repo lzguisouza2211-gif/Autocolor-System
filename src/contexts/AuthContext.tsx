@@ -48,6 +48,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     window.addEventListener('beforeunload', handleUnload);
 
+    // Sessão recusada pelo banco em qualquer tela: sai e vai para o login.
+    const handleExpired = () => { void signOut(); };
+    window.addEventListener('auth:expired', handleExpired);
+
     // Intervalo para renovar sessão periodicamente (a cada 9 minutos)
     refreshInterval.current = window.setInterval(async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -60,6 +64,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => {
       subscription.unsubscribe();
+      window.removeEventListener('auth:expired', handleExpired);
       if (refreshInterval.current) window.clearInterval(refreshInterval.current);
     };
   }, []);
