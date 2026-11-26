@@ -66,6 +66,9 @@ const PDV: React.FC = () => {
   const [search, setSearch] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [finalizing, setFinalizing] = useState(false);
+  // Trava síncrona contra clique duplo: o `finalizing` (state) só vale depois
+  // do próximo render, então um 2º clique rápido passava e gravava outra venda.
+  const finalizingRef = useRef(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [addSuccess, setAddSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -601,6 +604,8 @@ const PDV: React.FC = () => {
     }
 
     // Finalização direta da venda
+    if (finalizingRef.current) return;
+    finalizingRef.current = true;
     setFinalizing(true);
     setError(null);
     setSuccess(null);
@@ -757,6 +762,7 @@ const PDV: React.FC = () => {
       console.error('Erro inesperado ao finalizar venda:', err);
       setError('Erro inesperado ao finalizar venda');
     } finally {
+      finalizingRef.current = false;
       setFinalizing(false);
     }
   };
