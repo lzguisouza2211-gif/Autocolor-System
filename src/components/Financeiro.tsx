@@ -51,13 +51,24 @@ const Financeiro: React.FC = () => {
       : new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
     const historyStart = new Date(firstSaleDate.getFullYear(), firstSaleDate.getMonth(), 1);
 
-    // todas as vendas desde o início do histórico
-    const { data: allSales } = await supabase
-      .from('sales')
-      .select('id, total, paid_amount, created_at, payment_status')
-      .gte('created_at', historyStart.toISOString())
-      .lt('created_at', end.toISOString())
-      .is('deleted_at', null);
+    // todas as vendas desde o início do histórico.
+    // O Supabase devolve no máximo 1000 linhas por consulta (e corta sem avisar),
+    // então busca em páginas de 1000, ordenadas por id, até trazer todas.
+    const PAGE = 1000;
+    const allSales: { id: number; total: number; paid_amount: number | null; created_at: string; payment_status: string }[] = [];
+    for (let from = 0; ; from += PAGE) {
+      const { data: page, error } = await supabase
+        .from('sales')
+        .select('id, total, paid_amount, created_at, payment_status')
+        .gte('created_at', historyStart.toISOString())
+        .lt('created_at', end.toISOString())
+        .is('deleted_at', null)
+        .order('id', { ascending: true })
+        .range(from, from + PAGE - 1);
+      if (error || !page) break;
+      allSales.push(...page);
+      if (page.length < PAGE) break;
+    }
 
     // monta o mapa com todos os meses desde o início até o mês selecionado
     const monthMap = new Map<string, { received: number; pending: number; count: number }>();
